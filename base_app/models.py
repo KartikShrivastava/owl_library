@@ -43,8 +43,3 @@ class BookBorrower(models.Model):
 
     def __str__(self):
         return f'{self.book_borrower_id}'
-
-# edit email field to make it editable
-# add __string__ methods
-# add get url methods
-# fixed typo
