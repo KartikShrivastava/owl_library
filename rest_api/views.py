@@ -4,19 +4,19 @@ from base_app.models import Book, Borrower, BookBorrower
 from .serializers import BookSerializer
 
 @api_view(['GET'])
-def getAllBooks(request):
+def getAllBooks(request) -> Response:
     books = Book.objects.all()
     bookSerializer = BookSerializer(books, many=True)
     return Response(bookSerializer.data)
 
 @api_view(['GET'])
-def getBookDetails(request, owl_id):
+def getBookDetails(request, owl_id) -> Response:
     return Response()
 
 @api_view(['POST'])
-def borrowBook(request):
+def borrowBook(request) -> Response:
     return Response()
 
 @api_view(['UPDATE'])
-def returnBook(request):
+def returnBook(request) -> Response:
     return Response()

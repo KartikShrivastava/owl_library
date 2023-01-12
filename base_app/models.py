@@ -18,28 +18,29 @@ class Book(models.Model):
         choices=BOOK_TYPE,
         blank=True,
         default='nd',
-        help_text='Book type'
+        help_text='Book type',
+        verbose_name='book type',
     )
 
     is_borrowed = models.BooleanField(default=False)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.title} ({self.owl_id})'
 
 class Borrower(models.Model):
     email = models.EmailField(primary_key=True)
-    username = models.CharField(max_length=200)
+    username = models.CharField(max_length=200, verbose_name='user name')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.username} ({self.email})'
 
 class BookBorrower(models.Model):
     book_borrower_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    borrower_email = models.ForeignKey('Borrower', on_delete=models.CASCADE, null=True)
-    book_owl_id = models.ForeignKey('Book', on_delete=models.CASCADE, null=True)
+    borrower = models.ForeignKey('Borrower', on_delete=models.CASCADE, null=True)
+    book = models.ForeignKey('Book', on_delete=models.CASCADE, null=True)
     borrow_date = models.DateTimeField(auto_now=True)
     due_date = models.DateTimeField(null=True, blank=True)
     next_borrow_date = models.DateTimeField(null=True, blank=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.book_borrower_id}'
