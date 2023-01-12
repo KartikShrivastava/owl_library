@@ -23,14 +23,28 @@ class Book(models.Model):
 
     is_borrowed = models.BooleanField(default=False)
 
+    def __str__(self):
+        return f'{self.title} ({self.owl_id})'
+
 class Borrower(models.Model):
-    email = models.EmailField(primary_key=True, editable=False)
+    email = models.EmailField(primary_key=True)
     username = models.CharField(max_length=200)
+
+    def __str__(self):
+        return f'{self.username} ({self.email})'
 
 class BookBorrower(models.Model):
     book_borrower_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    borrower_email = models.ForeignKey('Borrower', on_delete=models.CASCADE, null=False)
-    book_owl_id: models.ForeignKey('Book', on_delete=models.CASCADE, null=False)
-    borrow_date: models.DateTimeField(auto_now=True)
-    due_date: models.DateTimeField(null=True, blank=True)
-    next_borrow_date: models.DateTimeField(null=True, blank=True)
+    borrower_email = models.ForeignKey('Borrower', on_delete=models.CASCADE, null=True)
+    book_owl_id = models.ForeignKey('Book', on_delete=models.CASCADE, null=True)
+    borrow_date = models.DateTimeField(auto_now=True)
+    due_date = models.DateTimeField(null=True, blank=True)
+    next_borrow_date = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.book_borrower_id}'
+
+# edit email field to make it editable
+# add __string__ methods
+# add get url methods
+# fixed typo
