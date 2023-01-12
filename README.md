@@ -13,3 +13,11 @@ A minimal REST api written using django framework. This api uses django-rest-fra
   DATABASE_NAME=existing_psql_database_name  
   DATABASE_USER=your_psql_username  
   DATABASE_PASS=your_psql_password
+
+## References
+[Django-rest-framework docs](https://www.django-rest-framework.org/)  
+[Django docs](https://docs.djangoproject.com/en/4.1/)  
+[Django Web Framework (Python) tutorial](https://developer.mozilla.org/en-US/docs/Learn/Server-side/Django)  
+[Django REST Framework Oversimplified](https://www.youtube.com/watch?v=cJveiktaOSQ&list=LL&index=2&ab_channel=DennisIvy)  
+[Django Rest Framework | Serializers & CRUD](https://www.youtube.com/watch?v=TmsD8QExZ84&ab_channel=DennisIvy)  
+[Django REST Framework - Build an API from Scratch](https://www.youtube.com/watch?v=i5JykvxUk_A&ab_channel=CalebCurry)  
