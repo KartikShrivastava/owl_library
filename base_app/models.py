@@ -34,8 +34,7 @@ class BookCopy(models.Model):
         max_length=2,
         choices=BOOK_COPY_TYPE,
         blank=True,
-        default='nd',
-        help_text='Book copy type',
+        default='nd'
     )
 
     def __str__(self) -> str:
