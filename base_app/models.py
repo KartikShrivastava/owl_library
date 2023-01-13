@@ -1,46 +1,64 @@
 from django.db import models
 import uuid
 
+class Author(models.Model):
+    name = models.CharField(primary_key=True, max_length=200, help_text='Full name of author')
+    is_popular = models.BooleanField()
+
+    def __str__(self) -> str:
+        return f'{self.name}'
+
 class Book(models.Model):
     owl_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
-    author_name = models.CharField(max_length=200, help_text='Full name of author')
+    author = models.ForeignKey('Author', on_delete=models.PROTECT)
+
+    class Meta:
+        unique_together = ('title', 'author')
+
+    def __str__(self) -> str:
+        return f'{self.title}'
+
+class BookCopy(models.Model):
+    book_copy_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    book = models.ForeignKey('Book', on_delete=models.PROTECT)
     
-    BOOK_TYPE = (
+    BOOK_COPY_TYPE = (
         ('pb', 'PAPERBACK'),
         ('hc', 'HARDCOVER'),
         ('hm', 'HANDMADE'),
         ('nd', 'NOTDEFINED')
     )
     
-    type = models.CharField(
+    book_copy_type = models.CharField(
         max_length=2,
-        choices=BOOK_TYPE,
+        choices=BOOK_COPY_TYPE,
         blank=True,
         default='nd',
-        help_text='Book type',
-        verbose_name='book type',
+        help_text='Book copy type',
     )
 
-    is_borrowed = models.BooleanField(default=False)
-
     def __str__(self) -> str:
-        return f'{self.title} ({self.owl_id})'
+        return f'{self.book_copy_id} ({self.book})'
 
-class Borrower(models.Model):
+class LibraryUser(models.Model):
     email = models.EmailField(primary_key=True)
     username = models.CharField(max_length=200, verbose_name='user name')
 
     def __str__(self) -> str:
-        return f'{self.username} ({self.email})'
+        return f'{self.email}'
 
-class BookBorrower(models.Model):
-    book_borrower_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    borrower = models.ForeignKey('Borrower', on_delete=models.CASCADE, null=True)
-    book = models.ForeignKey('Book', on_delete=models.CASCADE, null=True)
-    borrow_date = models.DateTimeField(auto_now=True)
-    due_date = models.DateTimeField(null=True, blank=True)
-    next_borrow_date = models.DateTimeField(null=True, blank=True)
+class BorrowRecord(models.Model):
+    borrow_record_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    borrow_date = models.DateTimeField()
+    return_date = models.DateTimeField()
+    is_returned = models.BooleanField(default=False)
+
+    book_copy = models.ForeignKey('BookCopy', on_delete=models.PROTECT)
+    library_user = models.ForeignKey('LibraryUser', on_delete=models.PROTECT)
+
+    class Meta:
+        unique_together = ('book_copy', 'library_user')
 
     def __str__(self) -> str:
-        return f'{self.book_borrower_id}'
+        return f'{self.borrow_record_id}'

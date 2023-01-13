@@ -2,6 +2,9 @@
 A minimal REST api written using django framework. This api uses django-rest-framework in REST api layer and uses postgresql in database layer.
 
 ### Class and ER diagrams
+#### Current state diagram
+![diagram 1](diagrams/ClassAndERDV2.png)
+#### Legacy diagram
 ![diagram 1](diagrams/ClassAndERD.png)
 
 ### Project setup instructions

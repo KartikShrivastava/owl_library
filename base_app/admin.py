@@ -1,7 +1,8 @@
 from django.contrib import admin
-from .models import Book, Borrower, BookBorrower
+from .models import Author, Book, BookCopy, LibraryUser, BorrowRecord
 
+admin.site.register(Author)
 admin.site.register(Book)
-admin.site.register(Borrower)
-admin.site.register(BookBorrower)
-
+admin.site.register(BookCopy)
+admin.site.register(LibraryUser)
+admin.site.register(BorrowRecord)
