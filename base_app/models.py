@@ -1,9 +1,10 @@
 import uuid
-from django.db import models
-from django.contrib.auth.models import AbstractUser
+
 from django.contrib.auth import get_user_model
-from django.db import DatabaseError
+from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import DatabaseError, models
+
 
 # This class handles all queries related to Author model
 class AuthorManager(models.Manager):
@@ -40,11 +41,12 @@ class AuthorManager(models.Manager):
         queryset = self.get_queryset()
         rows_affected = queryset.filter(name=author_name).update(is_popular=is_popular)
         return rows_affected
-    
+
     def delete_author(self, author_name):
         queryset = self.get_queryset()
         rows_affected = queryset.filter(name=author_name).delete()[0]
         return rows_affected
+
 
 class Author(models.Model):
     author_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -55,6 +57,7 @@ class Author(models.Model):
 
     def __str__(self) -> str:
         return f'{self.name}'
+
 
 class Book(models.Model):
     owl_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -67,17 +70,18 @@ class Book(models.Model):
     def __str__(self) -> str:
         return f'{self.title}'
 
+
 class BookCopy(models.Model):
     book_copy_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     book = models.ForeignKey('Book', on_delete=models.PROTECT)
-    
+
     BOOK_COPY_TYPE = (
         ('pb', 'PAPERBACK'),
         ('hc', 'HARDCOVER'),
         ('hm', 'HANDMADE'),
         ('nd', 'NOTDEFINED')
     )
-    
+
     book_copy_type = models.CharField(
         max_length=2,
         choices=BOOK_COPY_TYPE,
@@ -88,12 +92,14 @@ class BookCopy(models.Model):
     def __str__(self) -> str:
         return f'{self.book_copy_id} ({self.book})'
 
+
 # LibraryUser is a django User
 class LibraryUser(AbstractUser):
     pass
 
     def __str__(self):
         return self.username
+
 
 class BorrowRecord(models.Model):
     borrow_record_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
