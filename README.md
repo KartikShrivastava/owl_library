@@ -10,16 +10,16 @@ A minimal REST api written using django framework. This api uses django-rest-fra
     ├── owl_library             # [dir] main django project
     |   └── ...
     ├── base_app                # [dir] main application
-    |   └── models.py           # data access object / orm
-    │   └── tests               # contains all app level test files
+    |   └── models.py           # data access object layer / orm
+    │   └── tests               # [dir] contains all app level test files
     │       └── test_models.py  # unit testing models
     |       └── ...
     |   └── ...
     ├── rest_api                # [dir] django-rest-framework based module
-    |   └── services.py         # business logic (connects api and model layers)
+    |   └── services.py         # business logic (connects api and dao layers)
     │   └── urls.py             # REST api layer
     │   └── views.py            # REST api layer
-    │   └── serializers.py      # [de]serialize response object to/from json
+    │   └── serializers.py      # [de]serialize model object [from]to response object
     │   └── ...
     ├── diagrams                # [dir] contains diagrams for docs 
     ├── manage.py
@@ -29,7 +29,7 @@ A minimal REST api written using django framework. This api uses django-rest-fra
 ## Data Models
 1. Author: Stores `name` and `is_popular` attributes related to an author. There can be multiple books in the library with same author. So it holds one-to-many relationship with `Book`.
 2. Book: Stores `owl_id` and `title` as class attributes while `author` as a foreign key attribute. `owl_id` is the identifies which uniquely identifies a book in the library. Right now a book is constrainted to have only one author. Another important property of `Book` model is that, there can't be more than one book with same combination of `title` and `author`, represented by unique constraint.
-3. BookCopy: The main purpose of this model is to handle the removal of unique constraint present in `book_title`-`author` attributes of `Book` model, i.e. in case future requirements allow library to keep multiple copies of a book represented by same `owl_id` then those copies can easily be represented by `BookCopy` model. The only attribute of this model is `book_copy_type`. It's kept here instead in `Book` model because it seems more related to `BookCopy`. It also go hand-in-hand with the extension of library to keep multiple copies of several more types like `soft-copy`.
+3. BookCopy: The main purpose of this model is to handle the removal of unique constraint present in `book_title`-`author` attributes of `Book` model, i.e. in case future requirements allow library to keep multiple copies of a book represented by same `owl_id` then those copies can easily be represented by `BookCopy` model. The only attribute of this model is `book_copy_type`. It's kept here instead in `Book` model because it seems more related to `BookCopy`. It also goes hand-in-hand with the extension of library to keep multiple copies of several more types like `soft-copy`.
 4. LibraryUser: Stores `email` and `username` attributes of people using this library. Where `email` uniquely identifies a user.
 5. BorrowRecord: This model keeps track of all the books borrowed so far from the library. Once a record is created it is only deleted in special instances(for example when cool-down period of `LibraryUser` ends).
 
@@ -40,10 +40,10 @@ A minimal REST api written using django framework. This api uses django-rest-fra
 
 ## Class and ER diagrams
 1. Current state diagram  
-<img src="diagrams/ClassAndERDV2.png" alt="Your image title" width="80%"/>  
+  <img src="diagrams/ClassAndERDV2.png" alt="Your image title" width="80%"/>  
 
 2. Legacy diagram (missing requirements)  
-<img src="diagrams/ClassAndERD.png" alt="Your image title" width="70%"/>  
+  <img src="diagrams/ClassAndERD.png" alt="Your image title" width="70%"/>  
 
 ## Project setup instructions
 1. Create a virtual environment for the project
