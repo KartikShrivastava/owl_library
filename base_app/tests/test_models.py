@@ -8,7 +8,7 @@ class AuthorModelTest(TestCase):
     def setUpTestData(cls) -> None:
         cls.author = Author.objects.create(name='Napoleon Hill', is_popular=False)
     
-    def testObjectName(self) -> None:
+    def test_object_name(self) -> None:
         self.assertEqual(str(self.author), f'{self.author.name}')
 
 class BookModelTest(TestCase):
@@ -17,7 +17,7 @@ class BookModelTest(TestCase):
         cls.author = Author.objects.create(name='Napoleon Hill', is_popular=False)
         cls.book = Book.objects.create(title='Think And Grow Rich', author=cls.author)
     
-    def testObjectName(self) -> None:
+    def test_object_name(self) -> None:
         self.assertEqual(str(self.book), f'{self.book.title}')
 
 class BookCopyModelTest(TestCase):
@@ -27,10 +27,10 @@ class BookCopyModelTest(TestCase):
         cls.book = Book.objects.create(title='Think And Grow Rich', author=cls.author)
         cls.bookCopy = BookCopy.objects.create(book=cls.book, book_copy_type='pb')
     
-    def testObjectName(self) -> None:
+    def test_object_name(self) -> None:
         self.assertEqual(str(self.bookCopy), f'{self.bookCopy.book_copy_id} ({self.bookCopy.book})')
 
-    def testBookAttributeOnDeleteValue(self) -> None:
+    def test_book_attribute_on_delete_value(self) -> None:
         self.assertEqual(self.bookCopy._meta.get_field('book').remote_field.on_delete, models.PROTECT)
 
 class LibraryUserModelTest(TestCase):
@@ -38,7 +38,7 @@ class LibraryUserModelTest(TestCase):
     def setUpTestData(cls) -> None:
         cls.libraryUser = LibraryUser(email='john.doe@gmail.com', username='John Doe')
 
-    def testObjectName(self) -> None:
+    def test_object_name(self) -> None:
         self.assertEqual(str(self.libraryUser), f'{self.libraryUser.email}')
 
 class BorrowRecordModelTest(TestCase):
@@ -53,12 +53,11 @@ class BorrowRecordModelTest(TestCase):
                                         book_copy=cls.bookCopy,
                                         library_user=cls.libraryUser)
     
-    def testObjectName(self) -> None:
+    def test_object_name(self) -> None:
         self.assertEqual(str(self.borrowRecord), f'{self.borrowRecord.borrow_record_id}')
 
-    def testBookCopyAttributeOnDeleteValue(self) -> None:
+    def test_book_copy_attribute_on_delete_value(self) -> None:
         self.assertEqual(self.borrowRecord._meta.get_field('book_copy').remote_field.on_delete, models.PROTECT)
 
-    def testLibraryUserAttributeOnDeleteValue(self) -> None:
+    def test_library_user_attribute_on_delete_value(self) -> None:
         self.assertEqual(self.borrowRecord._meta.get_field('library_user').remote_field.on_delete, models.PROTECT)
-        
