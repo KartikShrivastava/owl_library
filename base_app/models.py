@@ -1,13 +1,16 @@
-from django.db import models
 import uuid
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+from django.contrib.auth import get_user_model
 
 class Author(models.Model):
-    name = models.CharField(primary_key=True, max_length=200, help_text='Full name of author')
+    author_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(unique=True, max_length=200, help_text='Full name of author')
     is_popular = models.BooleanField()
 
     def __str__(self) -> str:
         return f'{self.name}'
-
+    
 class Book(models.Model):
     owl_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
@@ -40,12 +43,12 @@ class BookCopy(models.Model):
     def __str__(self) -> str:
         return f'{self.book_copy_id} ({self.book})'
 
-class LibraryUser(models.Model):
-    email = models.EmailField(primary_key=True)
-    username = models.CharField(max_length=200, verbose_name='user name')
+# LibraryUser is a django User
+class LibraryUser(AbstractUser):
+    pass
 
-    def __str__(self) -> str:
-        return f'{self.email}'
+    def __str__(self):
+        return self.username
 
 class BorrowRecord(models.Model):
     borrow_record_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -54,7 +57,8 @@ class BorrowRecord(models.Model):
     is_returned = models.BooleanField(default=False)
 
     book_copy = models.ForeignKey('BookCopy', on_delete=models.PROTECT)
-    library_user = models.ForeignKey('LibraryUser', on_delete=models.PROTECT)
+    # extended django user (LibraryUser) is referenced by get_user_model()
+    library_user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT)
 
     class Meta:
         unique_together = ('book_copy', 'library_user')

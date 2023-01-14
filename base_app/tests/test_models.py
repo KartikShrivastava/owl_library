@@ -33,21 +33,13 @@ class BookCopyModelTest(TestCase):
     def test_book_attribute_on_delete_value(self) -> None:
         self.assertEqual(self.bookCopy._meta.get_field('book').remote_field.on_delete, models.PROTECT)
 
-class LibraryUserModelTest(TestCase):
-    @classmethod
-    def setUpTestData(cls) -> None:
-        cls.libraryUser = LibraryUser(email='john.doe@gmail.com', username='John Doe')
-
-    def test_object_name(self) -> None:
-        self.assertEqual(str(self.libraryUser), f'{self.libraryUser.email}')
-
 class BorrowRecordModelTest(TestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         cls.author = Author.objects.create(name='Napoleon Hill', is_popular=False)
         cls.book = Book.objects.create(title='Think And Grow Rich', author=cls.author)
         cls.bookCopy = BookCopy.objects.create(book=cls.book, book_copy_type='pb')
-        cls.libraryUser = LibraryUser(email='john.doe@gmail.com', username='John Doe')
+        cls.libraryUser = LibraryUser(email='john.doe@gmail.com', username='John Doe', password='pass')
         cls.borrowRecord = BorrowRecord(borrow_date=datetime.now(),
                                         return_date=datetime.now()+timedelta(days=14),
                                         book_copy=cls.bookCopy,
