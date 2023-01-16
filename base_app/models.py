@@ -201,6 +201,77 @@ class LibraryUser(AbstractUser):
         return self.username
 
 
+class BorrowRecordManager(models.Manager):
+    def _borrow_date_greater_than_return_date(self, borrow_record):
+        if borrow_record.borrow_date and borrow_record.return_date:
+            if borrow_record.borrow_date > borrow_record.return_date:
+                return True
+        return False
+
+    def insert_borrow_record(self, borrow_record):
+        if self._borrow_date_greater_than_return_date(borrow_record=borrow_record) == True:
+            raise ValidationError('Borrow date cannot be greater than return date')
+
+        queryset = self.get_queryset()
+        try:
+            return queryset.create(borrow_date=borrow_record.borrow_date,
+                                   return_date=borrow_record.return_date,
+                                   is_returned=borrow_record.is_returned,
+                                   book_copy=borrow_record.book_copy,
+                                   library_user=borrow_record.library_user)
+        except (DatabaseError, ObjectDoesNotExist) as e:
+            raise e
+
+    def get_borrow_record_by_id(self, borrow_record_id):
+        queryset = self.get_queryset()
+        try:
+            return queryset.filter(borrow_record_id=borrow_record_id).get()
+        except ObjectDoesNotExist as e:
+            raise e
+
+    def get_borrow_record_by_owl_id_and_username(self, owl_id, username):
+        queryset = self.get_queryset()
+        try:
+            return queryset.filter(book_copy__book__owl_id=owl_id,
+                                   library_user__username=username).get()
+        except ObjectDoesNotExist as e:
+            raise e
+
+    def get_all_borrow_records_by_owl_id(self, owl_id):
+        queryset = self.get_queryset()
+        borrow_records = queryset.filter(book_copy__book__owl_id=owl_id)
+        return borrow_records
+
+    def get_all_borrow_records_by_username(self, username):
+        queryset = self.get_queryset()
+        borrow_records = queryset.filter(library_user__username=username)
+        return borrow_records
+
+    def update_borrow_date(self, borrow_record_id, borrow_date):
+        queryset = self.get_queryset()
+        rows_affected = queryset.filter(borrow_record_id=borrow_record_id) \
+                                .update(borrow_date=borrow_date)
+        return rows_affected
+
+    def update_return_date(self, borrow_record_id, return_date):
+        queryset = self.get_queryset()
+        rows_affected = queryset.filter(borrow_record_id=borrow_record_id) \
+                                .update(return_date=return_date)
+        return rows_affected
+
+    def update_return_status(self, borrow_record_id, return_status):
+        queryset = self.get_queryset()
+        rows_affected = queryset.filter(borrow_record_id=borrow_record_id) \
+                                .update(is_returned=return_status)
+        return rows_affected
+    
+    def delete_borrow_record_by_borrow_record_id(self, borrow_record_id):
+        queryset = self.get_queryset()
+        rows_affected = queryset.filter(borrow_record_id=borrow_record_id) \
+                                .delete()[0]
+        return rows_affected
+
+
 # This model helps in maintaining relation between BookCopy and LibraryUser models 
 class BorrowRecord(models.Model):
     borrow_record_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -211,6 +282,8 @@ class BorrowRecord(models.Model):
     book_copy = models.ForeignKey('BookCopy', on_delete=models.PROTECT)
     # extended django user (LibraryUser) is referenced by get_user_model()
     library_user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT)
+
+    objects = BorrowRecordManager()
 
     class Meta:
         unique_together = ('book_copy', 'library_user')

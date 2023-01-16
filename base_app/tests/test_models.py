@@ -1,9 +1,10 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import DatabaseError, models
 from django.test import TestCase
+from django.utils import timezone
 
 from base_app.models import Author, Book, BookCopy, BorrowRecord, LibraryUser
 
@@ -304,26 +305,255 @@ class BookCopyModelTest(TestCase):
                          models.PROTECT)
 
 
-class BorrowRecordModelTest(TestCase):
+class BorrowRecordManagerTest(TestCase):
     @classmethod
     def setUpTestData(cls) -> None:
-        cls.author = Author.objects.create(name='Napoleon Hill', is_popular=False)
-        cls.book = Book.objects.create(title='Think And Grow Rich', author=cls.author)
-        cls.bookCopy = BookCopy.objects.create(book=cls.book, book_copy_type='pb')
-        cls.libraryUser = LibraryUser(email='john.doe@gmail.com', username='John Doe',
-                                      password='pass')
-        cls.borrowRecord = BorrowRecord(borrow_date=datetime.now(),
-                                        return_date=datetime.now()+timedelta(days=14),
-                                        book_copy=cls.bookCopy,
-                                        library_user=cls.libraryUser)
+        author = Author.objects.insert_author(author=Author(name='Bjarne Stroustrup',
+                                                            is_popular=False))
+        book = Book.objects.insert_book(book=Book(title='A Tour of C++', author=author))
+        book_copy = BookCopy(book=book, book_copy_type=BookCopy.BOOK_COPY_TYPE.HANDMADE)
+        cls.book_copy = BookCopy.objects.insert_book_copy(book_copy=book_copy)
+        cls.library_user = LibraryUser.objects.create(email='john.doe@gmail.com',
+                                                      username='John Doe',
+                                                      password='pass')
 
-    def test_object_name(self) -> None:
-        self.assertEqual(str(self.borrowRecord), f'{self.borrowRecord.borrow_record_id}')
+    def test_insert_borrow_record_successful_insertion(self):
+        borrow_record = BorrowRecord(borrow_date=timezone.now(),
+                                     return_date=timezone.now()+timedelta(days=14),
+                                     book_copy=self.book_copy,
+                                     library_user=self.library_user)
+        inserted_record = BorrowRecord.objects.insert_borrow_record(borrow_record=
+                                                                    borrow_record)
+        self.assertEqual(inserted_record.borrow_date, borrow_record.borrow_date)
+        self.assertEqual(inserted_record.return_date, borrow_record.return_date)
+        self.assertEqual(inserted_record.is_returned, False)
+        self.assertEqual(inserted_record.book_copy, borrow_record.book_copy)
+        self.assertEqual(inserted_record.library_user, borrow_record.library_user)
 
-    def test_book_copy_attribute_on_delete_value(self) -> None:
-        self.assertEqual(self.borrowRecord._meta.get_field('book_copy').remote_field.on_delete,
-                         models.PROTECT)
+    def test_insert_borrow_record_raises_exception_for_missing_book_copy(self):
+        borrow_record = BorrowRecord(borrow_date=timezone.now(),
+                                     return_date=timezone.now()+timedelta(days=14),
+                                     book_copy=None,
+                                     library_user=self.library_user)
+        self.assertRaises(ObjectDoesNotExist,
+                          BorrowRecord.objects.insert_borrow_record,
+                          borrow_record=borrow_record)
 
-    def test_library_user_attribute_on_delete_value(self) -> None:
-        self.assertEqual(self.borrowRecord._meta.get_field('library_user')
-                         .remote_field.on_delete, models.PROTECT)
+    def test_insert_borrow_record_raises_exception_for_missing_library_user(self):
+        borrow_record = BorrowRecord(borrow_date=timezone.now(),
+                                     return_date=timezone.now()+timedelta(days=14),
+                                     book_copy=self.book_copy,
+                                     library_user=None)
+        self.assertRaises(ObjectDoesNotExist,
+                          BorrowRecord.objects.insert_borrow_record,
+                          borrow_record=borrow_record)
+    
+    def test_insert_borrow_record_raises_exception_for_missing_borrow_or_return_dates(self):
+        borrow_record = BorrowRecord(book_copy=self.book_copy,
+                                     library_user=self.library_user)
+        self.assertRaises(DatabaseError,
+                          BorrowRecord.objects.insert_borrow_record,
+                          borrow_record=borrow_record)
+
+    def test_insert_borrow_record_raises_exception_for_return_less_than_borrow_date(self):
+        borrow_record = BorrowRecord(borrow_date=timezone.now()+timedelta(minutes=1),
+                                     return_date=timezone.now(),
+                                     book_copy=self.book_copy,
+                                     library_user=self.library_user)
+        self.assertRaises(ValidationError,
+                          BorrowRecord.objects.insert_borrow_record,
+                          borrow_record=borrow_record)
+
+    def test_get_borrow_record_by_id(self):
+        borrow_record =  BorrowRecord(borrow_date=timezone.now(),
+                                      return_date=timezone.now()+timedelta(days=10),
+                                      book_copy=self.book_copy,
+                                      library_user=self.library_user)
+        borrow_record_id = BorrowRecord.objects \
+                                      .insert_borrow_record \
+                                      (borrow_record=borrow_record).borrow_record_id
+        search_result = BorrowRecord.objects \
+                                    .get_borrow_record_by_id \
+                                    (borrow_record_id=borrow_record_id)
+        self.assertEqual(search_result.borrow_record_id, borrow_record_id)
+
+    def test_get_borrow_record_by_owl_id_and_username_returns_valid_record(self):
+        borrow_record =  BorrowRecord(borrow_date=timezone.now(),
+                                      return_date=timezone.now()+timedelta(days=10),
+                                      book_copy=self.book_copy,
+                                      library_user=self.library_user)
+        inserted_record = BorrowRecord.objects \
+                                      .insert_borrow_record(borrow_record=borrow_record)
+        owl_id = inserted_record.book_copy.book.owl_id
+        username = inserted_record.library_user.get_username()
+        search_result = BorrowRecord.objects \
+                                    .get_borrow_record_by_owl_id_and_username \
+                                    (owl_id=owl_id, username=username)
+        self.assertEqual(search_result, inserted_record)
+
+    def test_get_borrow_record_raises_exception_for_missing_record(self):
+        borrow_record =  BorrowRecord(borrow_date=timezone.now(),
+                                      return_date=timezone.now()+timedelta(days=10),
+                                      book_copy=self.book_copy,
+                                      library_user=self.library_user)
+        inserted_record = BorrowRecord.objects.insert_borrow_record(borrow_record=
+                                                                    borrow_record)
+        owl_id = inserted_record.book_copy.book.owl_id
+        username = inserted_record.library_user.get_username()
+        self.assertRaises(ObjectDoesNotExist,
+                          BorrowRecord.objects.get_borrow_record_by_owl_id_and_username,
+                          owl_id=None, username=username)
+        self.assertRaises(ObjectDoesNotExist,
+                          BorrowRecord.objects.get_borrow_record_by_owl_id_and_username,
+                          owl_id=owl_id, username=None)
+
+    def test_get_all_borrow_records_by_owl_id_returns_valid_records(self):
+        # insert two records belonging to same book_copy but different users
+        owl_id = self.book_copy.book.owl_id
+        library_user_1 = self.library_user
+        borrow_record =  BorrowRecord(borrow_date=timezone.now(),
+                                      return_date=timezone.now()+timedelta(days=10),
+                                      book_copy=self.book_copy,
+                                      library_user=library_user_1)
+        BorrowRecord.objects.insert_borrow_record(borrow_record=borrow_record)
+        library_user_2 = LibraryUser.objects.create(username='Ravi')
+        borrow_record.library_user = library_user_2
+        BorrowRecord.objects.insert_borrow_record(borrow_record=borrow_record)
+        borrow_records = list(BorrowRecord.objects \
+                                          .get_all_borrow_records_by_owl_id(owl_id=owl_id))
+        self.assertEqual(len(borrow_records), 2)
+
+    def test_get_all_borrow_records_by_username_returns_valid_records(self):
+        # insert two records belonging to same user but different book_copies
+        username = self.library_user.username
+        book_copy_1 = self.book_copy
+        borrow_record =  BorrowRecord(borrow_date=timezone.now(),
+                                      return_date=timezone.now()+timedelta(days=10),
+                                      book_copy=book_copy_1,
+                                      library_user=self.library_user)
+        BorrowRecord.objects.insert_borrow_record(borrow_record=borrow_record)
+        book_2 = Book.objects.insert_book(book=Book(title='The Design and Evolution of C++',
+                                                    author=self.book_copy.book.author))
+        book_copy_instance_2 = BookCopy(book=book_2,
+                                        book_copy_type=BookCopy.BOOK_COPY_TYPE.HANDMADE)
+        book_copy_2 = BookCopy.objects.insert_book_copy(book_copy=book_copy_instance_2)
+        borrow_record.book_copy = book_copy_2
+        BorrowRecord.objects.insert_borrow_record(borrow_record=borrow_record)
+        borrow_records = list(BorrowRecord \
+                              .objects \
+                              .get_all_borrow_records_by_username(username=username))
+        self.assertEqual(len(borrow_records), 2)
+
+    def test_update_borrow_date_successful_updation(self):
+        borrow_record =  BorrowRecord(borrow_date=timezone.now(),
+                                      return_date=timezone.now()+timedelta(days=10),
+                                      book_copy=self.book_copy,
+                                      library_user=self.library_user)
+        borrow_record_id = BorrowRecord.objects \
+                                       .insert_borrow_record(borrow_record=borrow_record) \
+                                       .borrow_record_id
+        new_borrow_date = timezone.now()+timedelta(days=10)
+        rows_affected = BorrowRecord.objects \
+                                    .update_borrow_date(borrow_record_id=borrow_record_id,
+                                                        borrow_date=new_borrow_date)
+        self.assertEqual(rows_affected, 1)
+        self.assertEqual(BorrowRecord \
+                         .objects \
+                         .get_borrow_record_by_id \
+                         (borrow_record_id=borrow_record_id).borrow_date,
+                         new_borrow_date)
+
+    def test_update_return_date_successful_updation(self):
+        borrow_record =  BorrowRecord(borrow_date=timezone.now(),
+                                      return_date=timezone.now()+timedelta(days=10),
+                                      book_copy=self.book_copy,
+                                      library_user=self.library_user)
+        borrow_record_id = BorrowRecord.objects \
+                                       .insert_borrow_record(borrow_record=borrow_record) \
+                                       .borrow_record_id
+        new_return_date = timezone.now()+timedelta(days=10)
+        rows_affected = BorrowRecord.objects \
+                                    .update_return_date(borrow_record_id=borrow_record_id,
+                                                        return_date=new_return_date)
+        self.assertEqual(rows_affected, 1)
+        self.assertEqual(BorrowRecord \
+                         .objects \
+                         .get_borrow_record_by_id \
+                         (borrow_record_id=borrow_record_id).return_date,
+                         new_return_date)
+
+    def test_update_return_status(self):
+        borrow_record =  BorrowRecord(borrow_date=timezone.now(),
+                                      return_date=timezone.now()+timedelta(days=10),
+                                      book_copy=self.book_copy,
+                                      library_user=self.library_user)
+        borrow_record_id = BorrowRecord.objects \
+                                       .insert_borrow_record(borrow_record=borrow_record) \
+                                       .borrow_record_id
+        new_return_status = True
+        rows_affected = BorrowRecord.objects \
+                                    .update_return_status(borrow_record_id=borrow_record_id,
+                                                          return_status=new_return_status)
+        self.assertEqual(rows_affected, 1)
+        self.assertEqual(BorrowRecord \
+                         .objects \
+                         .get_borrow_record_by_id \
+                         (borrow_record_id=borrow_record_id).is_returned,
+                         new_return_status)
+
+    def test_delete_borrow_record_successful_deletion(self):
+        borrow_record =  BorrowRecord(borrow_date=timezone.now(),
+                                      return_date=timezone.now()+timedelta(days=10),
+                                      book_copy=self.book_copy,
+                                      library_user=self.library_user)
+        borrow_record_id = BorrowRecord.objects \
+                                       .insert_borrow_record(borrow_record=borrow_record) \
+                                       .borrow_record_id
+        rows_affected = BorrowRecord.objects \
+                                    .delete_borrow_record_by_borrow_record_id \
+                                    (borrow_record_id=borrow_record_id)
+        self.assertEqual(rows_affected, 1)
+
+    def test_delete_borrow_record_do_nothing_for_none_borrow_record_id(self):
+        self.assertEqual(BorrowRecord.objects
+                                     .delete_borrow_record_by_borrow_record_id
+                                     (borrow_record_id=None),
+                         0)
+
+    def test_delete_borrow_record_raises_exception_for_invalid_borrow_record_id(self):
+        self.assertRaises(ValidationError,
+                          BorrowRecord.objects.delete_borrow_record_by_borrow_record_id,
+                          borrow_record_id='')
+
+
+class BorrowRecordModelTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        author = Author(name='Bjarne Stroustrup', is_popular=False)
+        cls.author = Author.objects.insert_author(author=author)
+        book = Book(title='A Tour of C++', author=cls.author)
+        cls.book = Book.objects.insert_book(book=book)
+        book_copy = BookCopy(book=cls.book, book_copy_type=BookCopy.BOOK_COPY_TYPE.HANDMADE)
+        cls.book_copy = BookCopy.objects.insert_book_copy(book_copy=book_copy)
+        cls.library_user = LibraryUser.objects.create(email='john.doe@gmail.com',
+                                                      username='John Doe',
+                                                      password='pass')
+        borrow_record = BorrowRecord(borrow_date=timezone.now(),
+                                     return_date=timezone.now()+timedelta(days=14),
+                                     book_copy=cls.book_copy,
+                                     library_user=cls.library_user)
+        cls.borrow_record = BorrowRecord.objects.insert_borrow_record(borrow_record=
+                                                                      borrow_record)
+
+    def test_object_name(self):
+        self.assertEqual(str(self.borrow_record), f'{self.borrow_record.borrow_record_id}')
+
+    def test_book_copy_attribute_on_delete_value(self):
+        book_copy_on_delete_value = self.borrow_record._meta.get_field('book_copy') \
+                                                            .remote_field.on_delete
+        self.assertEqual(book_copy_on_delete_value, models.PROTECT)
+
+    def test_library_user_attribute_on_delete_value(self):
+        library_user_on_delete_value = self.borrow_record._meta.get_field('library_user') \
+                                                               .remote_field.on_delete
+        self.assertEqual(library_user_on_delete_value, models.PROTECT)
