@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import DatabaseError, models
 
 
-# This class handles all queries related to Author model
+# This model handles all queries related to Author model
 class AuthorManager(models.Manager):
     def insert_author(self, author):
         queryset = self.get_queryset()
@@ -105,7 +105,7 @@ class BookManager(models.Manager):
         return queryset.all()
 
     def update_book_title(self, owl_id, new_book_title):
-        if len(new_book_title) == 0:
+        if new_book_title == None or len(new_book_title) == 0:
             raise ValidationError('Cannot update book title with an empty string')
         queryset = self.get_queryset()
         rows_affected = queryset.filter(owl_id=owl_id).update(title=new_book_title)
@@ -122,6 +122,7 @@ class BookManager(models.Manager):
         return rows_affected
 
 
+# Abstract representation of a book
 class Book(models.Model):
     owl_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
@@ -136,29 +137,63 @@ class Book(models.Model):
         return f'{self.title}'
 
 
+class BookCopyManager(models.Manager):
+    def insert_book_copy(self, book_copy):
+        if book_copy.book_copy_type not in BookCopy.BOOK_COPY_TYPE:
+            raise ValidationError('Cannot insert BookCopy with invalid BOOK_COPY_TYPE')
+
+        queryset = self.get_queryset()
+        try:
+            return queryset.create(book=book_copy.book,
+                                   book_copy_type=book_copy.book_copy_type)
+        except ObjectDoesNotExist as e:
+            raise e
+
+    def get_book_copy_with_matching_owl_id(self, owl_id):
+        queryset = self.get_queryset()
+        try:
+            return queryset.filter(book__owl_id=owl_id).get()
+        except ObjectDoesNotExist as e:
+            raise e
+
+    def update_book_copy_type(self, book_copy_id, new_book_copy_type):
+        if new_book_copy_type not in BookCopy.BOOK_COPY_TYPE:
+            raise ValidationError('Cannot update BookCopy with invalid BOOK_COPY_TYPE')
+
+        queryset = self.get_queryset()
+        rows_affected = queryset.filter(book_copy_id=book_copy_id) \
+                                .update(book_copy_type= new_book_copy_type)
+        return rows_affected
+
+    def delete_book_copy(self, book_copy_id):
+        queryset = self.get_queryset()
+        rows_affected = queryset.filter(book_copy_id=book_copy_id).delete()[0]
+        return rows_affected
+
+
+# This model represents one or more physical/soft copy of a book present in library
 class BookCopy(models.Model):
     book_copy_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    book = models.ForeignKey('Book', on_delete=models.PROTECT)
+    # remove unique constraint and use ForeignKey to store more copies of the same book
+    book = models.OneToOneField('Book', on_delete=models.PROTECT, unique=True)
 
-    BOOK_COPY_TYPE = (
-        ('pb', 'PAPERBACK'),
-        ('hc', 'HARDCOVER'),
-        ('hm', 'HANDMADE'),
-        ('nd', 'NOTDEFINED')
-    )
+    class BOOK_COPY_TYPE(models.TextChoices):
+        PAPERBACK = 'pb', 'PAPERBACK'
+        HARDCOVER = 'hc', 'HARDCOVER'
+        HANDMADE = 'hm', 'HANDMADE'
 
     book_copy_type = models.CharField(
         max_length=2,
-        choices=BOOK_COPY_TYPE,
-        blank=True,
-        default='nd'
+        choices=BOOK_COPY_TYPE.choices
     )
+
+    objects = BookCopyManager()
 
     def __str__(self) -> str:
         return f'{self.book_copy_id} ({self.book})'
 
 
-# LibraryUser is a django User
+# LibraryUser model is actually a django User
 class LibraryUser(AbstractUser):
     pass
 
@@ -166,6 +201,7 @@ class LibraryUser(AbstractUser):
         return self.username
 
 
+# This model helps in maintaining relation between BookCopy and LibraryUser models 
 class BorrowRecord(models.Model):
     borrow_record_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     borrow_date = models.DateTimeField()

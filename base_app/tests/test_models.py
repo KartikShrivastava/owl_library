@@ -220,6 +220,74 @@ class BookModelTest(TestCase):
         self.assertEqual(str(self.book), f'{self.book.title}')
 
 
+class BookCopyManagerTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        author_name = 'Greg Mckeown'
+        book_title = 'Effortless: Make It Easier to Do What Matters Most'
+        author = Author.objects.insert_author(author=
+                                              Author(name=author_name, is_popular=False))
+        cls.book = Book.objects.insert_book(book=Book(title=book_title, author=author))
+
+    def test_insert_book_copy_successful_insertion(self):
+        book_copy = BookCopy(book=self.book, book_copy_type=BookCopy.BOOK_COPY_TYPE.HARDCOVER)
+        inserted_book_copy = BookCopy.objects.insert_book_copy(book_copy=book_copy)
+        self.assertEqual(inserted_book_copy.book.owl_id, self.book.owl_id)
+
+    def test_insert_book_copy_raises_exception_for_missing_book(self):
+        book_copy = BookCopy(book=None, book_copy_type=BookCopy.BOOK_COPY_TYPE.PAPERBACK)
+        self.assertRaises(ObjectDoesNotExist, BookCopy.objects.insert_book_copy,
+                          book_copy=book_copy)
+
+    def test_insert_book_copy_raises_exception_for_invalid_book_copy_type(self):
+        book_copy = BookCopy(book=self.book, book_copy_type='')
+        self.assertRaises(ValidationError, BookCopy.objects.insert_book_copy,
+                          book_copy=book_copy)
+        book_copy = BookCopy(book=self.book, book_copy_type=None)
+        self.assertRaises(ValidationError, BookCopy.objects.insert_book_copy,
+                          book_copy=book_copy)
+
+    def test_get_book_copy_with_matching_owl_id_returns_valid_book_copy(self):
+        book_copy = BookCopy(book=self.book, book_copy_type=BookCopy.BOOK_COPY_TYPE.PAPERBACK)
+        search_owl_id = self.book.owl_id
+        BookCopy.objects.insert_book_copy(book_copy=book_copy)
+        search_result = BookCopy.objects.get_book_copy_with_matching_owl_id(owl_id=
+                                                                            search_owl_id)
+        self.assertEqual(search_result.book.owl_id, search_owl_id)
+
+    def test_get_book_copy_with_matching_owl_id_raises_exception_on_failed_search(self):
+        search_owl_id = uuid.uuid4()
+        self.assertRaises(ObjectDoesNotExist,
+                          BookCopy.objects.get_book_copy_with_matching_owl_id,
+                          owl_id=search_owl_id)
+
+    def test_update_book_copy_type_successful_updation(self):
+        book_copy = BookCopy(book=self.book, book_copy_type=BookCopy.BOOK_COPY_TYPE.PAPERBACK)
+        book_copy_id = BookCopy.objects.insert_book_copy(book_copy=book_copy).book_copy_id
+        new_book_copy_type = BookCopy.BOOK_COPY_TYPE.HARDCOVER
+        rows_affected = BookCopy.objects.update_book_copy_type \
+                                         (book_copy_id=book_copy_id,
+                                          new_book_copy_type=new_book_copy_type)
+        self.assertEqual(rows_affected, 1)
+
+    def test_update_book_copy_type_riases_exception_for_invalid_book_copy_type(self):
+        book_copy = BookCopy(book=self.book, book_copy_type=BookCopy.BOOK_COPY_TYPE.PAPERBACK)
+        book_copy_id = BookCopy.objects.insert_book_copy(book_copy=book_copy).book_copy_id
+        new_book_copy_type = ''
+        self.assertRaises(ValidationError, BookCopy.objects.update_book_copy_type,
+                          book_copy_id=book_copy_id,
+                          new_book_copy_type=new_book_copy_type)
+
+    def test_delete_book_copy_successful_deletion(self):
+        book_copy = BookCopy(book=self.book, book_copy_type=BookCopy.BOOK_COPY_TYPE.PAPERBACK)
+        book_copy_id = BookCopy.objects.insert_book_copy(book_copy=book_copy).book_copy_id
+        rows_affected = BookCopy.objects.delete_book_copy(book_copy_id=book_copy_id)
+        self.assertEqual(rows_affected, 1)
+
+    def test_delete_book_copy_raises_exception_for_invalid_book_copy_id(self):
+        self.assertRaises(ValidationError, BookCopy.objects.delete_book_copy, book_copy_id='')
+
+
 class BookCopyModelTest(TestCase):
     @classmethod
     def setUpTestData(cls) -> None:
