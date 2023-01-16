@@ -63,7 +63,7 @@ class Author(models.Model):
 
 class BookManager(models.Manager):
     def insert_book(self, book):
-        if book.title == None or len(book.title) == 0:
+        if book.title is None or len(book.title) == 0:
             raise ValidationError('Cannot insert book with an empty title')
 
         queryset = self.get_queryset()
@@ -105,7 +105,7 @@ class BookManager(models.Manager):
         return queryset.all()
 
     def update_book_title(self, owl_id, new_book_title):
-        if new_book_title == None or len(new_book_title) == 0:
+        if new_book_title is None or len(new_book_title) == 0:
             raise ValidationError('Cannot update book title with an empty string')
         queryset = self.get_queryset()
         rows_affected = queryset.filter(owl_id=owl_id).update(title=new_book_title)
@@ -162,7 +162,7 @@ class BookCopyManager(models.Manager):
 
         queryset = self.get_queryset()
         rows_affected = queryset.filter(book_copy_id=book_copy_id) \
-                                .update(book_copy_type= new_book_copy_type)
+                                .update(book_copy_type=new_book_copy_type)
         return rows_affected
 
     def delete_book_copy(self, book_copy_id):
@@ -203,13 +203,13 @@ class LibraryUser(AbstractUser):
 
 class BorrowRecordManager(models.Manager):
     def _borrow_date_greater_than_return_date(self, borrow_record):
-        if borrow_record.borrow_date and borrow_record.return_date:
+        if borrow_record.borrow_date is not None and borrow_record.return_date is not None:
             if borrow_record.borrow_date > borrow_record.return_date:
                 return True
         return False
 
     def insert_borrow_record(self, borrow_record):
-        if self._borrow_date_greater_than_return_date(borrow_record=borrow_record) == True:
+        if self._borrow_date_greater_than_return_date(borrow_record=borrow_record) is True:
             raise ValidationError('Borrow date cannot be greater than return date')
 
         queryset = self.get_queryset()
@@ -249,30 +249,30 @@ class BorrowRecordManager(models.Manager):
 
     def update_borrow_date(self, borrow_record_id, borrow_date):
         queryset = self.get_queryset()
-        rows_affected = queryset.filter(borrow_record_id=borrow_record_id) \
-                                .update(borrow_date=borrow_date)
+        rows_affected = queryset.filter(
+                        borrow_record_id=borrow_record_id).update(borrow_date=borrow_date)
         return rows_affected
 
     def update_return_date(self, borrow_record_id, return_date):
         queryset = self.get_queryset()
-        rows_affected = queryset.filter(borrow_record_id=borrow_record_id) \
-                                .update(return_date=return_date)
+        rows_affected = queryset.filter(
+                        borrow_record_id=borrow_record_id).update(return_date=return_date)
         return rows_affected
 
     def update_return_status(self, borrow_record_id, return_status):
         queryset = self.get_queryset()
-        rows_affected = queryset.filter(borrow_record_id=borrow_record_id) \
-                                .update(is_returned=return_status)
+        rows_affected = queryset.filter(
+                        borrow_record_id=borrow_record_id).update(is_returned=return_status)
         return rows_affected
-    
+
     def delete_borrow_record_by_borrow_record_id(self, borrow_record_id):
         queryset = self.get_queryset()
-        rows_affected = queryset.filter(borrow_record_id=borrow_record_id) \
-                                .delete()[0]
+        rows_affected = queryset.filter(
+                        borrow_record_id=borrow_record_id).delete()[0]
         return rows_affected
 
 
-# This model helps in maintaining relation between BookCopy and LibraryUser models 
+# This model helps in maintaining relation between BookCopy and LibraryUser models
 class BorrowRecord(models.Model):
     borrow_record_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     borrow_date = models.DateTimeField()
