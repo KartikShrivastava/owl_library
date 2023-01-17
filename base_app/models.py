@@ -153,7 +153,7 @@ class BookCopyManager(models.Manager):
         queryset = self.get_queryset()
         try:
             return queryset.filter(book__owl_id=owl_id).get()
-        except ObjectDoesNotExist as e:
+        except Exception as e:
             raise e
 
     def update_book_copy_type(self, book_copy_id, new_book_copy_type):

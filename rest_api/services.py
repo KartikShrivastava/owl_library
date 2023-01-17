@@ -52,11 +52,12 @@ def _get_distinct_book_copy_ids_of_borrowed_books():
     return distinct_book_copy_ids_of_borrowed_books
 
 
-def get_all_available_book_copies():
+def get_all_available_books():
     distinct_book_copy_ids_of_borrowed_books = _get_distinct_book_copy_ids_of_borrowed_books()
-    available_book_copies = BookCopy.objects.exclude(
-                            book_copy_id__in=distinct_book_copy_ids_of_borrowed_books)
-    return available_book_copies
+
+    books = Book.objects.exclude(
+            bookcopy__book_copy_id__in=distinct_book_copy_ids_of_borrowed_books)
+    return books
 
 
 # Warning: This method throws exception if author with name does not exist
@@ -118,16 +119,17 @@ def _get_cool_down_period_of_normal_author_in_days():
 
 
 def _get_author_by_owl_id_of_book(owl_id):
-    return Author.objects.filter(book__owl_id=owl_id)
+    # TODO: Move it to AuthorManager
+    return Author.objects.filter(book__owl_id=owl_id).get()
 
 
 def _get_cool_down_period_in_days(owl_id):
     author = _get_author_by_owl_id_of_book(owl_id=owl_id)
     author_name = author.name
     if _is_author_popular(author_name) is True:
-        return _get_cool_down_period_of_popular_author_in_days
+        return _get_cool_down_period_of_popular_author_in_days()
     else:
-        return _get_cool_down_period_of_normal_author_in_days
+        return _get_cool_down_period_of_normal_author_in_days()
 
 
 def _get_cool_down_period_end_date(previous_borrow_date, owl_id):
@@ -137,13 +139,13 @@ def _get_cool_down_period_end_date(previous_borrow_date, owl_id):
 
 
 def _can_borrow_book_again(previous_borrow_date, owl_id):
-    cool_down_period_end_date = _get_cool_down_period_end_date(previous_borrow_date)
+    cool_down_period_end_date = _get_cool_down_period_end_date(previous_borrow_date, owl_id)
     current_borrow_date = timezone.now()
     is_cool_down_period_ended = cool_down_period_end_date < current_borrow_date
     return is_cool_down_period_ended
 
 
-def _borrow_back_book(borrow_record_id):
+def _borrow_book_back(borrow_record_id):
     current_date = timezone.now()
     new_borrow_date = current_date
     new_return_date = current_date+current_date+timedelta(
@@ -170,10 +172,10 @@ def borrow_book(owl_id, username):
         previous_borrow_date = previous_borrow_record.borrow_date
         if _can_borrow_book_again(previous_borrow_date, owl_id) is True:
             borrow_record_id = previous_borrow_record.borrow_record_id
-            updated_borrow_record = _borrow_back_book(borrow_record_id)
+            updated_borrow_record = _borrow_book_back(borrow_record_id)
             return updated_borrow_record
         else:
-            raise ValidationError('Cannot borrow back book too frequently')
+            raise ValidationError('Cannot borrow book back too frequently')
 
 
 def _is_book_already_returned(borrow_record_id):
@@ -188,30 +190,39 @@ def return_book(owl_id, username):
     try:
         borrow_record = BorrowRecord.objects.get_borrow_record_by_owl_id_and_username(
                         owl_id=owl_id, username=username)
-    except ObjectDoesNotExist as e:
+    except Exception as e:
         raise e
 
     if _is_book_already_returned(borrow_record.borrow_record_id) is True:
         raise ValidationError('Book already returned')
 
     rows_affected = BorrowRecord.objects.update_return_status(
-                    borrow_record_id=borrow_record.borrow_record_id)
+                    borrow_record_id=borrow_record.borrow_record_id,
+                    return_status=True)
     return rows_affected == 1
 
 
 def get_next_borrow_date(owl_id, username):
     try:
+        Book.objects.get_book_with_owl_id(owl_id=owl_id)
+    except Exception as e:
+        raise e
+    try:
         borrow_record = BorrowRecord.objects.get_borrow_record_by_owl_id_and_username(
                         owl_id=owl_id, username=username)
-    except ObjectDoesNotExist:
+    except Exception:
         return 'You can borrow this book immediately'
 
     previous_borrow_date = borrow_record.borrow_date
     cool_down_period_end_date = _get_cool_down_period_end_date(previous_borrow_date, owl_id)
     current_borrow_date = timezone.now()
     if cool_down_period_end_date < current_borrow_date:
-        return 'You can borrow this book immediately'
+        return 'Book is now available, you can borrow it immediately'
     else:
         date = cool_down_period_end_date.date()
         formatted_date = f'{date.day}/{date.month}/{date.year}'
         return f'You can borrow this book again on {formatted_date}'
+
+
+def get_my_books(username):
+    return BorrowRecord.objects.filter(library_user__username=username)
