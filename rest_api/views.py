@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 import rest_api.services as services
-from base_app.models import Book, LibraryUser
+from base_app.models import LibraryUser
 
 from .serializers import (BookSerializer, BorrowRecordSerializer,
                           LibraryUserSerializer)
@@ -13,7 +13,7 @@ from .serializers import (BookSerializer, BorrowRecordSerializer,
 
 @api_view(['GET'])
 def get_all_books_api(request):
-    books = Book.objects.all()
+    books = services.get_all_books()
     book_serializer = BookSerializer(books, many=True)
     return Response(book_serializer.data)
 

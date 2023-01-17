@@ -13,55 +13,12 @@ def _is_author_popular(name):
     return name[0] == 'j' or name[0] == 'J'
 
 
-def add_author(author_name):
-    is_popular = _is_author_popular(author_name)
-    author_instance = Author(name=author_name, is_popular=is_popular)
-    try:
-        return Author.objects.insert_author(author=author_instance)
-    except Exception as e:
-        raise e
-
-
-def add_book(book_title, author_name):
-    try:
-        author = Author.objects.get_author_with_exact_name(name=author_name)
-        book_instance = Book(title=book_title, author=author)
-        return Book.objects.insert_book(book_instance)
-    except Exception as e:
-        raise e
-
-
-def add_book_copy(book_title, book_type):
-    try:
-        book = Book.objects.get_book_by_exact_title(book_title=book_title)
-        book_copy_instance = BookCopy(book=book, book_copy_type=book_type)
-        BookCopy.objects.insert_book_copy(book_copy_instance)
-    except Exception as e:
-        raise e
-
-
 def _get_distinct_book_copy_ids_of_borrowed_books():
     borrowed_books = BorrowRecord.objects.get_borrow_records_by_return_status(
                         is_returned=False)
     distinct_book_copy_ids_of_borrowed_books = borrowed_books.values_list(
                                                 'book_copy_id', flat=True).distinct()
     return distinct_book_copy_ids_of_borrowed_books
-
-
-def get_all_available_books():
-    distinct_book_copy_ids_of_borrowed_books = _get_distinct_book_copy_ids_of_borrowed_books()
-    books = Book.objects.exclude(
-            bookcopy__book_copy_id__in=distinct_book_copy_ids_of_borrowed_books)
-    return books
-
-
-def get_all_books_by_similar_author_name(name):
-    authors_with_similar_name = Author.objects.get_all_authors_with_similar_name(name)
-    author_ids_with_similar_name = authors_with_similar_name.values_list(
-                                    'author_id', flat=True)
-    books = Book.objects.get_all_books_by_author_id_list(
-            author_id_list=author_ids_with_similar_name)
-    return books
 
 
 def _get_book_borrow_duration_in_days():
@@ -154,6 +111,60 @@ def _update_borrow_record(owl_id, borrow_record):
         raise ValidationError('Cannot borrow book again too frequently')
 
 
+def _validate_book_owl_id(owl_id):
+    try:
+        Book.objects.get_book_by_owl_id(owl_id=owl_id)
+    except Exception as e:
+        raise e
+
+
+def add_author(author_name):
+    is_popular = _is_author_popular(author_name)
+    author_instance = Author(name=author_name, is_popular=is_popular)
+    try:
+        return Author.objects.insert_author(author=author_instance)
+    except Exception as e:
+        raise e
+
+
+def add_book(book_title, author_name):
+    try:
+        author = Author.objects.get_author_with_exact_name(name=author_name)
+        book_instance = Book(title=book_title, author=author)
+        return Book.objects.insert_book(book_instance)
+    except Exception as e:
+        raise e
+
+
+def add_book_copy(book_title, book_type):
+    try:
+        book = Book.objects.get_book_by_exact_title(book_title=book_title)
+        book_copy_instance = BookCopy(book=book, book_copy_type=book_type)
+        BookCopy.objects.insert_book_copy(book_copy_instance)
+    except Exception as e:
+        raise e
+
+
+def get_all_books():
+    return Book.objects.get_all_books()
+
+
+def get_all_available_books():
+    distinct_book_copy_ids_of_borrowed_books = _get_distinct_book_copy_ids_of_borrowed_books()
+    books = Book.objects.exclude(
+            bookcopy__book_copy_id__in=distinct_book_copy_ids_of_borrowed_books)
+    return books
+
+
+def get_all_books_by_similar_author_name(name):
+    authors_with_similar_name = Author.objects.get_all_authors_with_similar_name(name)
+    author_ids_with_similar_name = authors_with_similar_name.values_list(
+                                    'author_id', flat=True)
+    books = Book.objects.get_all_books_by_author_id_list(
+            author_id_list=author_ids_with_similar_name)
+    return books
+
+
 def borrow_book(owl_id, username):
     borrow_record = _get_previous_borrow_record(owl_id, username)
     if borrow_record is None:
@@ -173,13 +184,6 @@ def return_book(owl_id, username):
                         borrow_record_id=borrow_record.borrow_record_id,
                         return_status=True)
         return rows_affected == 1
-    except Exception as e:
-        raise e
-
-
-def _validate_book_owl_id(owl_id):
-    try:
-        Book.objects.get_book_by_owl_id(owl_id=owl_id)
     except Exception as e:
         raise e
 
