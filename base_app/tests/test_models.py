@@ -423,28 +423,6 @@ class BorrowRecordManagerTest(TestCase):
                             username=username))
         self.assertEqual(len(borrow_records), 2)
 
-    def test_update_borrow_date_successful_updation(self):
-        borrow_record = self.borrow_record_instance
-        borrow_record_id = BorrowRecord.objects.insert_borrow_record(
-                            borrow_record=borrow_record).borrow_record_id
-        new_borrow_date = timezone.now()+timedelta(days=10)
-        rows_affected = BorrowRecord.objects.update_borrow_date(
-                        borrow_record_id=borrow_record_id, borrow_date=new_borrow_date)
-        self.assertEqual(rows_affected, 1)
-        self.assertEqual(BorrowRecord.objects.get_borrow_record_by_id(
-                            borrow_record_id=borrow_record_id).borrow_date, new_borrow_date)
-
-    def test_update_return_date_successful_updation(self):
-        borrow_record = self.borrow_record_instance
-        borrow_record_id = BorrowRecord.objects.insert_borrow_record(
-                            borrow_record=borrow_record).borrow_record_id
-        new_return_date = timezone.now()+timedelta(days=10)
-        rows_affected = BorrowRecord.objects.update_return_date(
-                            borrow_record_id=borrow_record_id, return_date=new_return_date)
-        self.assertEqual(rows_affected, 1)
-        self.assertEqual(BorrowRecord.objects.get_borrow_record_by_id(
-                            borrow_record_id=borrow_record_id).return_date, new_return_date)
-
     def test_update_return_status(self):
         borrow_record = self.borrow_record_instance
         borrow_record_id = BorrowRecord.objects.insert_borrow_record(
@@ -455,6 +433,34 @@ class BorrowRecordManagerTest(TestCase):
         self.assertEqual(rows_affected, 1)
         self.assertEqual(BorrowRecord.objects.get_borrow_record_by_id(
                             borrow_record_id=borrow_record_id).is_returned, new_return_status)
+
+    def test_borrow_date_and_return_date_successful_updation(self):
+        borrow_record = self.borrow_record_instance
+        borrow_record_id = BorrowRecord.objects.insert_borrow_record(
+                            borrow_record=borrow_record).borrow_record_id
+        new_borrow_date = timezone.now()
+        new_return_date = timezone.now()+timedelta(days=10)
+        rows_affected = BorrowRecord.objects.update_borrow_date_and_return_date(
+                            borrow_record_id=borrow_record_id,
+                            borrow_date=new_borrow_date,
+                            return_date=new_return_date)
+        self.assertEqual(rows_affected, 1)
+        updated_borrow_record = BorrowRecord.objects.get_borrow_record_by_id(
+                            borrow_record_id=borrow_record_id)
+        self.assertEqual(updated_borrow_record.borrow_date, new_borrow_date)
+        self.assertEqual(updated_borrow_record.return_date, new_return_date)
+
+    def test_borrow_date_and_return_date_raises_exception_for_invalid_dates(self):
+        borrow_record = self.borrow_record_instance
+        borrow_record_id = BorrowRecord.objects.insert_borrow_record(
+                            borrow_record=borrow_record).borrow_record_id
+        new_borrow_date = timezone.now()+timedelta(days=10)
+        new_return_date = timezone.now()
+        self.assertRaises(ValidationError,
+                          BorrowRecord.objects.update_borrow_date_and_return_date,
+                          borrow_record_id=borrow_record_id,
+                          borrow_date=new_borrow_date,
+                          return_date=new_return_date)
 
     def test_delete_borrow_record_successful_deletion(self):
         borrow_record = self.borrow_record_instance

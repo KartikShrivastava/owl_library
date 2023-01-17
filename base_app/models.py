@@ -247,30 +247,19 @@ class BorrowRecordManager(models.Manager):
         borrow_records = queryset.filter(library_user__username=username)
         return borrow_records
 
-    def update_borrow_date(self, borrow_record_id, borrow_date):
-        queryset = self.get_queryset()
-        rows_affected = queryset.filter(
-                        borrow_record_id=borrow_record_id).update(borrow_date=borrow_date)
-        return rows_affected
-
-    def update_return_date(self, borrow_record_id, return_date):
-        queryset = self.get_queryset()
-        rows_affected = queryset.filter(
-                        borrow_record_id=borrow_record_id).update(return_date=return_date)
-        return rows_affected
-
     def update_return_status(self, borrow_record_id, return_status):
         queryset = self.get_queryset()
         rows_affected = queryset.filter(
                         borrow_record_id=borrow_record_id).update(is_returned=return_status)
         return rows_affected
 
-    def update_borrow_record(self, borrow_record_id, borrow_date, return_date, is_returned):
-        borrow_record = self.get_borrow_record_by_id(borrow_record_id=borrow_record_id)
-        self.update_borrow_date(borrow_record_id=borrow_record_id, borrow_date=borrow_date)
-        self.update_return_date(borrow_record_id=borrow_record_id, return_date=return_date)
-        self.update_return_status(borrow_record_id=borrow_record_id, is_returned=is_returned)
-        return borrow_record
+    def update_borrow_date_and_return_date(self, borrow_record_id, borrow_date, return_date):
+        if borrow_date >= return_date:
+            raise ValidationError('Borrow date cannot be greater than return date')
+        queryset = self.get_queryset()
+        rows_affected = queryset.filter(borrow_record_id=borrow_record_id).update(
+                        borrow_date=borrow_date, return_date=return_date)
+        return rows_affected
 
     def delete_borrow_record_by_borrow_record_id(self, borrow_record_id):
         queryset = self.get_queryset()

@@ -143,6 +143,24 @@ def _can_borrow_book_again(previous_borrow_date, owl_id):
     return is_cool_down_period_ended
 
 
+def _borrow_back_book(borrow_record_id):
+    current_date = timezone.now()
+    new_borrow_date = current_date
+    new_return_date = current_date+current_date+timedelta(
+                        days=_get_book_borrow_duration_in_days())
+    new_return_status = False
+    rows_affected_1 = BorrowRecord.objects.update_borrow_date_and_return_date(
+                    book_record_id=borrow_record_id, borrow_date=new_borrow_date,
+                    return_date=new_return_date)
+    rows_affected_2 = BorrowRecord.objects.update_return_status(
+                        borrow_record_id=borrow_record_id, return_status=new_return_status)
+    if rows_affected_1 != 1 or rows_affected_2 != 1:
+        raise ValidationError('Something went wrong, please try again')
+    updated_borrow_record = BorrowRecord.objects.get_borrow_record_by_id(
+                            borrow_record_id=borrow_record_id)
+    return updated_borrow_record
+
+
 def borrow_book(owl_id, username):
     previous_borrow_record = _get_previous_borrow_record(owl_id, username)
     if previous_borrow_record is None:
@@ -151,14 +169,8 @@ def borrow_book(owl_id, username):
     else:
         previous_borrow_date = previous_borrow_record.borrow_date
         if _can_borrow_book_again(previous_borrow_date, owl_id) is True:
-            current_date = timezone.now()
-            new_borrow_date = current_date
-            new_return_date = current_date+current_date+timedelta(
-                    days=_get_book_borrow_duration_in_days())
-            new_return_status = False
-            updated_borrow_record = BorrowRecord.objects.update_borrow_record(
-                                    borrow_date=new_borrow_date, return_date=new_return_date,
-                                    is_returned=new_return_status)
+            borrow_record_id = previous_borrow_record.borrow_record_id
+            updated_borrow_record = _borrow_back_book(borrow_record_id)
             return updated_borrow_record
         else:
             raise ValidationError('Cannot borrow back book too frequently')
