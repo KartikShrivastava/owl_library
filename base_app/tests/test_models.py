@@ -226,9 +226,9 @@ class BookCopyManagerTest(TestCase):
     def setUpTestData(cls):
         author_name = 'Greg Mckeown'
         book_title = 'Effortless: Make It Easier to Do What Matters Most'
-        author = Author.objects \
-                       .insert_author(author=Author(name=author_name, is_popular=False))
-        cls.book = Book.objects.insert_book(book=Book(title=book_title, author=author))
+        cls.author = Author.objects.insert_author(
+                        author=Author(name=author_name, is_popular=False))
+        cls.book = Book.objects.insert_book(book=Book(title=book_title, author=cls.author))
 
     def test_insert_book_copy_successful_insertion(self):
         book_copy = BookCopy(book=self.book, book_copy_type=BookCopy.BOOK_COPY_TYPE.HARDCOVER)

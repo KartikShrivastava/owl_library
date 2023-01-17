@@ -265,6 +265,13 @@ class BorrowRecordManager(models.Manager):
                         borrow_record_id=borrow_record_id).update(is_returned=return_status)
         return rows_affected
 
+    def update_borrow_record(self, borrow_record_id, borrow_date, return_date, is_returned):
+        borrow_record = self.get_borrow_record_by_id(borrow_record_id=borrow_record_id)
+        self.update_borrow_date(borrow_record_id=borrow_record_id, borrow_date=borrow_date)
+        self.update_return_date(borrow_record_id=borrow_record_id, return_date=return_date)
+        self.update_return_status(borrow_record_id=borrow_record_id, is_returned=is_returned)
+        return borrow_record
+
     def delete_borrow_record_by_borrow_record_id(self, borrow_record_id):
         queryset = self.get_queryset()
         rows_affected = queryset.filter(
