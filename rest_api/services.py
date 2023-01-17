@@ -1,7 +1,7 @@
 from datetime import timedelta
 
+from django.core.exceptions import ValidationError
 from django.utils import timezone
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
 
 from base_app.models import Author, Book, BookCopy, BorrowRecord, LibraryUser
 
@@ -33,56 +33,35 @@ def add_book(book_title, author_name):
 
 def add_book_copy(book_title, book_type):
     try:
-        book = Book.objects.get_book_with_exact_title(book_title=book_title)
+        book = Book.objects.get_book_by_exact_title(book_title=book_title)
         book_copy_instance = BookCopy(book=book, book_copy_type=book_type)
         BookCopy.objects.insert_book_copy(book_copy_instance)
     except Exception as e:
         raise e
 
 
-def _get_borrow_records_of_all_borrowed_books():
-    borrowed_books = BorrowRecord.objects.filter(is_returned=False)
-    return borrowed_books
-
-
 def _get_distinct_book_copy_ids_of_borrowed_books():
-    borrowed_books = _get_borrow_records_of_all_borrowed_books()
+    borrowed_books = BorrowRecord.objects.get_borrow_records_by_return_status(
+                        is_returned=False)
     distinct_book_copy_ids_of_borrowed_books = borrowed_books.values_list(
-                                        'book_copy_id', flat=True).distinct()
+                                                'book_copy_id', flat=True).distinct()
     return distinct_book_copy_ids_of_borrowed_books
 
 
 def get_all_available_books():
     distinct_book_copy_ids_of_borrowed_books = _get_distinct_book_copy_ids_of_borrowed_books()
-
     books = Book.objects.exclude(
             bookcopy__book_copy_id__in=distinct_book_copy_ids_of_borrowed_books)
     return books
 
 
-# Warning: This method throws exception if author with name does not exist
-# Use get_all_books_by_similar_author_name(...) instead for better user experience
-def get_all_books_by_exact_author_name(name):
-    author_with_exact_name = Author.objects.get_author_with_exact_name(name)
-    books = Book.objects.filter(author_id=author_with_exact_name.author_id)
-    return books
-
-
 def get_all_books_by_similar_author_name(name):
     authors_with_similar_name = Author.objects.get_all_authors_with_similar_name(name)
-    books = Book.objects.filter(
-            author_id__in=authors_with_similar_name.values_list('author_id', flat=True))
+    author_ids_with_similar_name = authors_with_similar_name.values_list(
+                                    'author_id', flat=True)
+    books = Book.objects.get_all_books_by_author_id_list(
+            author_id_list=author_ids_with_similar_name)
     return books
-
-
-def _get_previous_borrow_record(owl_id, username):
-    # throws exception if borrow record does not exist, i.e. book wasn't borrowed previously
-    try:
-        borrow_record = BorrowRecord.objects.get_borrow_record_by_owl_id_and_username(
-                        owl_id=owl_id, username=username)
-        return borrow_record
-    except Exception:
-        return None
 
 
 def _get_book_borrow_duration_in_days():
@@ -118,14 +97,8 @@ def _get_cool_down_period_of_normal_author_in_days():
     return num_days_in_month * cool_down_period_in_months
 
 
-def _get_author_by_owl_id_of_book(owl_id):
-    # TODO: Move it to AuthorManager
-    return Author.objects.filter(book__owl_id=owl_id).get()
-
-
 def _get_cool_down_period_in_days(owl_id):
-    author = _get_author_by_owl_id_of_book(owl_id=owl_id)
-    author_name = author.name
+    author_name = Author.objects.get_author_by_owl_id(owl_id=owl_id).name
     if _is_author_popular(author_name) is True:
         return _get_cool_down_period_of_popular_author_in_days()
     else:
@@ -145,44 +118,50 @@ def _can_borrow_book_again(previous_borrow_date, owl_id):
     return is_cool_down_period_ended
 
 
-def _borrow_book_back(borrow_record_id):
+def _borrow_book_again(borrow_record_id):
     current_date = timezone.now()
     new_borrow_date = current_date
-    new_return_date = current_date+current_date+timedelta(
-                        days=_get_book_borrow_duration_in_days())
+    new_return_date = current_date+timedelta(days=_get_book_borrow_duration_in_days())
     new_return_status = False
-    rows_affected_1 = BorrowRecord.objects.update_borrow_date_and_return_date(
+    rows_affected = BorrowRecord.objects.update_dates_and_status(
                     book_record_id=borrow_record_id, borrow_date=new_borrow_date,
-                    return_date=new_return_date)
-    rows_affected_2 = BorrowRecord.objects.update_return_status(
-                        borrow_record_id=borrow_record_id, return_status=new_return_status)
-    if rows_affected_1 != 1 or rows_affected_2 != 1:
+                    return_date=new_return_date, return_status=new_return_status)
+    if rows_affected != 1:
         raise ValidationError('Something went wrong, please try again')
-    updated_borrow_record = BorrowRecord.objects.get_borrow_record_by_id(
+    updated_borrow_record = BorrowRecord.objects.get_borrow_record_by_owl_id(
                             borrow_record_id=borrow_record_id)
     return updated_borrow_record
 
 
+# throws exception if borrow record does not exist, i.e. book wasn't borrowed previously
+def _get_previous_borrow_record(owl_id, username):
+    try:
+        borrow_record = BorrowRecord.objects.get_borrow_record_by_owl_id_and_username(
+                        owl_id=owl_id, username=username)
+        return borrow_record
+    except Exception:
+        return None
+
+
+def _update_borrow_record(owl_id, borrow_record):
+    borrow_date = borrow_record.borrow_date
+    borrow_record_id = borrow_record.borrow_record_id
+
+    if _can_borrow_book_again(borrow_date, owl_id) is True:
+        updated_borrow_record = _borrow_book_again(borrow_record_id)
+        return updated_borrow_record
+    else:
+        raise ValidationError('Cannot borrow book again too frequently')
+
+
 def borrow_book(owl_id, username):
-    previous_borrow_record = _get_previous_borrow_record(owl_id, username)
-    if previous_borrow_record is None:
+    borrow_record = _get_previous_borrow_record(owl_id, username)
+    if borrow_record is None:
         new_borrow_record = _create_new_borrow_record(owl_id, username)
         return new_borrow_record
     else:
-        previous_borrow_date = previous_borrow_record.borrow_date
-        if _can_borrow_book_again(previous_borrow_date, owl_id) is True:
-            borrow_record_id = previous_borrow_record.borrow_record_id
-            updated_borrow_record = _borrow_book_back(borrow_record_id)
-            return updated_borrow_record
-        else:
-            raise ValidationError('Cannot borrow book back too frequently')
-
-
-def _is_book_already_returned(borrow_record_id):
-    borrow_record = BorrowRecord.objects.get_borrow_record_by_id(
-                    borrow_record_id=borrow_record_id)
-    is_returned = borrow_record.is_returned
-    return is_returned is True
+        updated_borrow_record = _update_borrow_record(owl_id, borrow_record)
+        return updated_borrow_record
 
 
 # returns True is book returned successfully else False
@@ -190,32 +169,32 @@ def return_book(owl_id, username):
     try:
         borrow_record = BorrowRecord.objects.get_borrow_record_by_owl_id_and_username(
                         owl_id=owl_id, username=username)
+        rows_affected = BorrowRecord.objects.update_return_status(
+                        borrow_record_id=borrow_record.borrow_record_id,
+                        return_status=True)
+        return rows_affected == 1
     except Exception as e:
         raise e
 
-    if _is_book_already_returned(borrow_record.borrow_record_id) is True:
-        raise ValidationError('Book already returned')
 
-    rows_affected = BorrowRecord.objects.update_return_status(
-                    borrow_record_id=borrow_record.borrow_record_id,
-                    return_status=True)
-    return rows_affected == 1
+def _validate_book_owl_id(owl_id):
+    try:
+        Book.objects.get_book_by_owl_id(owl_id=owl_id)
+    except Exception as e:
+        raise e
 
 
 def get_next_borrow_date(owl_id, username):
-    try:
-        Book.objects.get_book_with_owl_id(owl_id=owl_id)
-    except Exception as e:
-        raise e
-    try:
-        borrow_record = BorrowRecord.objects.get_borrow_record_by_owl_id_and_username(
-                        owl_id=owl_id, username=username)
-    except Exception:
+    _validate_book_owl_id(owl_id=owl_id)
+
+    borrow_record = _get_previous_borrow_record(owl_id=owl_id, username=username)
+    if borrow_record is None:
         return 'You can borrow this book immediately'
 
     previous_borrow_date = borrow_record.borrow_date
-    cool_down_period_end_date = _get_cool_down_period_end_date(previous_borrow_date, owl_id)
     current_borrow_date = timezone.now()
+    cool_down_period_end_date = _get_cool_down_period_end_date(previous_borrow_date, owl_id)
+
     if cool_down_period_end_date < current_borrow_date:
         return 'Book is now available, you can borrow it immediately'
     else:
@@ -224,5 +203,5 @@ def get_next_borrow_date(owl_id, username):
         return f'You can borrow this book again on {formatted_date}'
 
 
-def get_my_books(username):
-    return BorrowRecord.objects.filter(library_user__username=username)
+def get_my_borrow_records(username):
+    return BorrowRecord.objects.get_all_borrow_records_by_username(username=username)

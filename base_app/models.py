@@ -34,6 +34,14 @@ class AuthorManager(models.Manager):
         authors = queryset.filter(name__icontains=name)
         return authors
 
+    def get_author_by_owl_id(self, owl_id):
+        queryset = self.get_queryset()
+        try:
+            author = queryset.filter(book__owl_id=owl_id).get()
+            return author
+        except ObjectDoesNotExist as e:
+            raise e
+
     def update_author_name(self, old_author_name, new_author_name):
         queryset = self.get_queryset()
         rows_affected = queryset.filter(name=old_author_name).update(name=new_author_name)
@@ -73,16 +81,16 @@ class BookManager(models.Manager):
         except ObjectDoesNotExist as e:
             raise e
 
-    def get_book_with_owl_id(self, owl_id):
+    def get_book_by_owl_id(self, owl_id):
         queryset = self.get_queryset()
         try:
             return queryset.filter(owl_id=owl_id).get()
         except ObjectDoesNotExist as e:
             raise e
 
-    # (Recommended) use only if book with given title exist, instead use
+    # (Warning) use only if book with given title is known to exist, instead use
     # get_all_books_with_similar_title to check availability of book(s) with similar title
-    def get_book_with_exact_title(self, book_title):
+    def get_book_by_exact_title(self, book_title):
         queryset = self.get_queryset()
         try:
             return queryset.filter(title=book_title).get()
@@ -90,14 +98,14 @@ class BookManager(models.Manager):
             raise e
 
     # search is not case_sensitive
-    def get_all_books_with_similar_title(self, book_title):
+    def get_all_books_by_similar_title(self, book_title):
         queryset = self.get_queryset()
         books = queryset.filter(title__icontains=book_title)
         return books
 
-    def get_all_books_with_similar_author_name(self, author_name):
+    def get_all_books_by_author_id_list(self, author_id_list):
         queryset = self.get_queryset()
-        books = queryset.filter(author__name__icontains=author_name)
+        books = queryset.filter(author_id__in=author_id_list)
         return books
 
     def get_all_books(self):
@@ -222,7 +230,7 @@ class BorrowRecordManager(models.Manager):
         except (DatabaseError, ObjectDoesNotExist) as e:
             raise e
 
-    def get_borrow_record_by_id(self, borrow_record_id):
+    def get_borrow_record_by_owl_id(self, borrow_record_id):
         queryset = self.get_queryset()
         try:
             return queryset.filter(borrow_record_id=borrow_record_id).get()
@@ -247,18 +255,25 @@ class BorrowRecordManager(models.Manager):
         borrow_records = queryset.filter(library_user__username=username)
         return borrow_records
 
+    def get_borrow_records_by_return_status(self, is_returned):
+        queryset = self.get_queryset()
+        borrow_records = queryset.filter(is_returned=is_returned)
+        return borrow_records
+
     def update_return_status(self, borrow_record_id, return_status):
         queryset = self.get_queryset()
         rows_affected = queryset.filter(
                         borrow_record_id=borrow_record_id).update(is_returned=return_status)
         return rows_affected
 
-    def update_borrow_date_and_return_date(self, borrow_record_id, borrow_date, return_date):
+    def update_dates_and_status(self, borrow_record_id, borrow_date, return_date,
+                                return_status):
         if borrow_date >= return_date:
             raise ValidationError('Borrow date cannot be greater than return date')
         queryset = self.get_queryset()
         rows_affected = queryset.filter(borrow_record_id=borrow_record_id).update(
-                        borrow_date=borrow_date, return_date=return_date)
+                        borrow_date=borrow_date, return_date=return_date,
+                        is_returned=return_status)
         return rows_affected
 
     def delete_borrow_record_by_borrow_record_id(self, borrow_record_id):

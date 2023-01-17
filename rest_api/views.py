@@ -73,9 +73,9 @@ def get_book_availability_api(request, owl_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_my_books_api(request):
+def get_my_borrow_records_api(request):
     username = request.user.username
-    borrow_records = services.get_my_books(username=username)
+    borrow_records = services.get_my_borrow_records(username=username)
     borrow_records_serializer = BorrowRecordSerializer(borrow_records, many=True)
     return Response(borrow_records_serializer.data)
 

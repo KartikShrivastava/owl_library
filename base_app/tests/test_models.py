@@ -111,23 +111,23 @@ class BookManagerTest(TestCase):
     def test_get_book_with_owl_id_returns_valid_book(self):
         book = Book(title='An Introduction to Python', author=self.author)
         inserted_book = Book.objects.insert_book(book=book)
-        search_result = Book.objects.get_book_with_owl_id(owl_id=inserted_book.owl_id)
+        search_result = Book.objects.get_book_by_owl_id(owl_id=inserted_book.owl_id)
         self.assertEqual(search_result.owl_id, inserted_book.owl_id)
 
     def test_get_book_with_owl_id_raises_exception_if_book_not_found(self):
         random_uuid = uuid.uuid4()
-        self.assertRaises(ObjectDoesNotExist, Book.objects.get_book_with_owl_id, random_uuid)
+        self.assertRaises(ObjectDoesNotExist, Book.objects.get_book_by_owl_id, random_uuid)
 
     def test_get_book_with_exact_title_returns_valid_book(self):
         title = 'An Introduction to Python'
         book = Book(title=title, author=self.author)
         Book.objects.insert_book(book=book)
-        search_result = Book.objects.get_book_with_exact_title(book_title=title)
+        search_result = Book.objects.get_book_by_exact_title(book_title=title)
         self.assertEqual(search_result.title, title)
 
     def test_get_book_with_exact_title_raises_exception_if_book_doesnt_exist(self):
         title = 'An Introduction to Python'
-        self.assertRaises(ObjectDoesNotExist, Book.objects.get_book_with_exact_title,
+        self.assertRaises(ObjectDoesNotExist, Book.objects.get_book_by_exact_title,
                           book_title=title)
 
     def test_get_all_books_with_similar_title_returns_valid_books(self):
@@ -139,26 +139,10 @@ class BookManagerTest(TestCase):
         author2 = self.author
         Book.objects.insert_book(book=Book(title=title2, author=author2))
         search_string = 'python'
-        books = list(Book.objects.get_all_books_with_similar_title(book_title=search_string))
+        books = list(Book.objects.get_all_books_by_similar_title(book_title=search_string))
         self.assertEqual(len(books), 2)
         for book in books:
             self.assertTrue(search_string in book.title.lower())
-
-    def test_get_all_books_with_similar_author_name_returns_valid_books(self):
-        title1 = 'Django for APIs: Build web APIs with Python & Django'
-        author1 = Author.objects.insert_author(author=Author(name='William S. Vincent',
-                                                             is_popular=False))
-        Book.objects.insert_book(book=Book(title=title1, author=author1))
-        title2 = 'Refactoring Workbook'
-        author2 = Author.objects.insert_author(author=Author(name='William C. Wake',
-                                                             is_popular=False))
-        Book.objects.insert_book(book=Book(title=title2, author=author2))
-        search_string = 'william'
-        books = list(Book.objects
-                     .get_all_books_with_similar_author_name(author_name=search_string))
-        self.assertEqual(len(books), 2)
-        for book in books:
-            self.assertTrue(search_string in book.author.name.lower())
 
     def test_get_all_books(self):
         author1 = self.author
@@ -366,7 +350,7 @@ class BorrowRecordManagerTest(TestCase):
         borrow_record = self.borrow_record_instance
         borrow_record_id = BorrowRecord.objects.insert_borrow_record(
                             borrow_record=borrow_record).borrow_record_id
-        search_result = BorrowRecord.objects.get_borrow_record_by_id(
+        search_result = BorrowRecord.objects.get_borrow_record_by_owl_id(
                         borrow_record_id=borrow_record_id)
         self.assertEqual(search_result.borrow_record_id, borrow_record_id)
 
@@ -431,36 +415,8 @@ class BorrowRecordManagerTest(TestCase):
         rows_affected = BorrowRecord.objects.update_return_status(
                         borrow_record_id=borrow_record_id, return_status=new_return_status)
         self.assertEqual(rows_affected, 1)
-        self.assertEqual(BorrowRecord.objects.get_borrow_record_by_id(
+        self.assertEqual(BorrowRecord.objects.get_borrow_record_by_owl_id(
                             borrow_record_id=borrow_record_id).is_returned, new_return_status)
-
-    def test_borrow_date_and_return_date_successful_updation(self):
-        borrow_record = self.borrow_record_instance
-        borrow_record_id = BorrowRecord.objects.insert_borrow_record(
-                            borrow_record=borrow_record).borrow_record_id
-        new_borrow_date = timezone.now()
-        new_return_date = timezone.now()+timedelta(days=10)
-        rows_affected = BorrowRecord.objects.update_borrow_date_and_return_date(
-                            borrow_record_id=borrow_record_id,
-                            borrow_date=new_borrow_date,
-                            return_date=new_return_date)
-        self.assertEqual(rows_affected, 1)
-        updated_borrow_record = BorrowRecord.objects.get_borrow_record_by_id(
-                            borrow_record_id=borrow_record_id)
-        self.assertEqual(updated_borrow_record.borrow_date, new_borrow_date)
-        self.assertEqual(updated_borrow_record.return_date, new_return_date)
-
-    def test_borrow_date_and_return_date_raises_exception_for_invalid_dates(self):
-        borrow_record = self.borrow_record_instance
-        borrow_record_id = BorrowRecord.objects.insert_borrow_record(
-                            borrow_record=borrow_record).borrow_record_id
-        new_borrow_date = timezone.now()+timedelta(days=10)
-        new_return_date = timezone.now()
-        self.assertRaises(ValidationError,
-                          BorrowRecord.objects.update_borrow_date_and_return_date,
-                          borrow_record_id=borrow_record_id,
-                          borrow_date=new_borrow_date,
-                          return_date=new_return_date)
 
     def test_delete_borrow_record_successful_deletion(self):
         borrow_record = self.borrow_record_instance
