@@ -7,6 +7,8 @@ from base_app.models import Author, Book, BookCopy, BorrowRecord, LibraryUser
 
 
 def _is_author_popular(name):
+    if type(name) != str:
+        raise ValidationError('Only string arguments are allowed')
     if len(name) == 0:
         return False
     # identity author with name starting with letter 'j' or 'J' as popular
@@ -23,6 +25,11 @@ def _get_distinct_book_copy_ids_of_borrowed_books():
 
 def _get_book_borrow_duration_in_days():
     return 14
+
+
+def _get_number_of_days_in_month():
+    # taking average number of days in a month as 30
+    return 30
 
 
 def _create_new_borrow_record(owl_id, username):
@@ -42,16 +49,12 @@ def _create_new_borrow_record(owl_id, username):
 
 def _get_cool_down_period_of_popular_author_in_days():
     cool_down_period_in_months = 6
-    # taking average number of days in a month as 30
-    num_days_in_month = 30
-    return num_days_in_month * cool_down_period_in_months
+    return _get_number_of_days_in_month() * cool_down_period_in_months
 
 
 def _get_cool_down_period_of_normal_author_in_days():
     cool_down_period_in_months = 3
-    # taking average number of days in a month as 30
-    num_days_in_month = 30
-    return num_days_in_month * cool_down_period_in_months
+    return _get_number_of_days_in_month() * cool_down_period_in_months
 
 
 def _get_cool_down_period_in_days(owl_id):
@@ -81,7 +84,7 @@ def _borrow_book_again(borrow_record_id):
     new_return_date = current_date+timedelta(days=_get_book_borrow_duration_in_days())
     new_return_status = False
     rows_affected = BorrowRecord.objects.update_dates_and_status(
-                    book_record_id=borrow_record_id, borrow_date=new_borrow_date,
+                    borrow_record_id=borrow_record_id, borrow_date=new_borrow_date,
                     return_date=new_return_date, return_status=new_return_status)
     if rows_affected != 1:
         raise ValidationError('Something went wrong, please try again')
@@ -90,7 +93,7 @@ def _borrow_book_again(borrow_record_id):
     return updated_borrow_record
 
 
-# throws exception if borrow record does not exist, i.e. book wasn't borrowed previously
+# returns None if borrow record does not exist, i.e. book wasn't borrowed previously
 def _get_previous_borrow_record(owl_id, username):
     try:
         borrow_record = BorrowRecord.objects.get_borrow_record_by_owl_id_and_username(
@@ -100,10 +103,7 @@ def _get_previous_borrow_record(owl_id, username):
         return None
 
 
-def _update_borrow_record(owl_id, borrow_record):
-    borrow_date = borrow_record.borrow_date
-    borrow_record_id = borrow_record.borrow_record_id
-
+def _try_update_borrow_record(owl_id, borrow_date, borrow_record_id):
     if _can_borrow_book_again(borrow_date, owl_id) is True:
         updated_borrow_record = _borrow_book_again(borrow_record_id)
         return updated_borrow_record
@@ -171,7 +171,9 @@ def borrow_book(owl_id, username):
         new_borrow_record = _create_new_borrow_record(owl_id, username)
         return new_borrow_record
     else:
-        updated_borrow_record = _update_borrow_record(owl_id, borrow_record)
+        updated_borrow_record = _try_update_borrow_record(
+                                owl_id, borrow_record.borrow_date,
+                                borrow_record.borrow_record_id)
         return updated_borrow_record
 
 
@@ -194,6 +196,8 @@ def get_next_borrow_date(owl_id, username):
     borrow_record = _get_previous_borrow_record(owl_id=owl_id, username=username)
     if borrow_record is None:
         return 'You can borrow this book immediately'
+    elif borrow_record.is_returned is False:
+        return 'You have not returned this book yet, kindly return it first'
 
     previous_borrow_date = borrow_record.borrow_date
     current_borrow_date = timezone.now()
