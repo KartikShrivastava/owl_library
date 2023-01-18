@@ -71,7 +71,7 @@ This api has a very minimal authentication/authorization functionality just to m
 ### Prerequisites
 1. Postgresql installation
 2. Python3
-### Steps
+### Steps to use browsable api
 1. Clone this github repo and go the directory of the project
 2. Create a virtual environment for the project
 3. Activate virtual environment
@@ -86,7 +86,8 @@ This api has a very minimal authentication/authorization functionality just to m
 9. Go back to root url and click on `Login` button present in top-right corner
 10. Enter username and password
 11. Start browsing the api
-
+### Run tests
+This project uses django wrapper of python unittest for unit testing, unittest.mock for mocking and rest_framwork APITestCase for integration testing. To run unit all unit and integration test run `python manage.py test`.
 
 ## References
 [Django-rest-framework docs](https://www.django-rest-framework.org/)  
