@@ -2,12 +2,11 @@ from datetime import timedelta
 from unittest import mock
 
 from django.core.exceptions import ValidationError
-
 from django.test import TestCase
 from django.utils import timezone
 
 import rest_api.services as services
-from base_app.models import Author, Book, BookCopy, LibraryUser, BorrowRecord
+from base_app.models import Author, Book, BookCopy, BorrowRecord, LibraryUser
 
 
 class HelperFunctionsTest(TestCase):
