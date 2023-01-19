@@ -82,10 +82,16 @@ This api has a very minimal authentication/authorization functionality just to m
   DATABASE_USER=your_psql_username  
   DATABASE_PASS=your_psql_password
 7. Run `python manage.py runserver` and open the server link in your browser
-8. Go to this url `http://127.0.0.1:8000/` to register a new user account by entering username and password
+8. Go to this url `http://127.0.0.1:8000/accounts/register/` to register a new user account by entering username and password
 9. Go back to root url and click on `Login` button present in top-right corner
 10. Enter username and password
 11. Start browsing the api
+### Steps to insert dummy data
+These steps assume that you have followed `steps to use browsable api`
+1. Stop the server
+2. Goal here is to run a script present in this path `dummy_data/insert_dummy_data_1.py`.  
+  2.1. Windows users can do that by executing this command after opening up the django python shell. At first run `python manage.py shell` and then execute the command `exec(open('dummy_data\insert_dummy_data_1.py').read())`  
+  2.2. Linux users can use this command `python manage.py shell < ./dummy_data/insert_dummy_data_1.py`
 ### Run tests
 This project uses django wrapper of python unittest for unit testing, unittest.mock for mocking and rest_framwork APITestCase for integration testing. To run unit all unit and integration test run `python manage.py test`.
 
