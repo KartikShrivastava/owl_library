@@ -35,6 +35,9 @@ class AuthorManager(models.Manager):
         return authors
 
     def get_author_by_owl_id(self, owl_id):
+        if owl_id is None:
+            raise ValidationError('Invalid owl_id')
+
         queryset = self.get_queryset()
         try:
             author = queryset.filter(book__owl_id=owl_id).get()
@@ -255,7 +258,7 @@ class BorrowRecordManager(models.Manager):
         borrow_records = queryset.filter(library_user__username=username)
         return borrow_records
 
-    def get_borrow_records_by_return_status(self, is_returned):
+    def get_all_borrow_records_by_return_status(self, is_returned):
         queryset = self.get_queryset()
         borrow_records = queryset.filter(is_returned=is_returned)
         return borrow_records
@@ -266,6 +269,7 @@ class BorrowRecordManager(models.Manager):
                         borrow_record_id=borrow_record_id).update(is_returned=return_status)
         return rows_affected
 
+    # update borrow_date, return_date and is_returned of BorrowRecord with borrw_record_id
     def update_dates_and_status(self, borrow_record_id, borrow_date, return_date,
                                 return_status):
         if borrow_date >= return_date:

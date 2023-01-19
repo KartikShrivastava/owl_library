@@ -16,7 +16,7 @@ def _is_author_popular(name):
 
 
 def _get_distinct_book_copy_ids_of_borrowed_books():
-    borrowed_books = BorrowRecord.objects.get_borrow_records_by_return_status(
+    borrowed_books = BorrowRecord.objects.get_all_borrow_records_by_return_status(
                         is_returned=False)
     distinct_book_copy_ids_of_borrowed_books = borrowed_books.values_list(
                                                 'book_copy_id', flat=True).distinct()

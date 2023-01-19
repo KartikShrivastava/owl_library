@@ -52,6 +52,20 @@ class AuthorManagerTest(TestCase):
         for author in authors:
             self.assertTrue(search_name in author.name.lower())
 
+    def test_get_author_by_owl_id_returns_valid_author(self):
+        author = Author.objects.create(name='William S. Vincent', is_popular=False)
+        book = Book.objects.create(author=author, title='Refactoring Workbook')
+        returned_author = Author.objects.get_author_by_owl_id(owl_id=book.owl_id)
+        self.assertEqual(returned_author.name, author.name)
+        self.assertEqual(returned_author.is_popular, author.is_popular)
+
+    def test_get_author_by_owl_id_raises_exception_for_invalid_owl_id(self):
+        random_owl_id = uuid.uuid4()
+        self.assertRaises(Exception, Author.objects.get_author_by_owl_id,
+                            owl_id=random_owl_id)
+        self.assertRaises(Exception, Author.objects.get_author_by_owl_id,
+                            owl_id=None)
+
     def test_update_author_name(self):
         old_name = self.author.name
         new_name = 'James Arthur Gosling'
@@ -143,6 +157,21 @@ class BookManagerTest(TestCase):
         self.assertEqual(len(books), 2)
         for book in books:
             self.assertTrue(search_string in book.title.lower())
+
+    def test_get_all_books_by_author_id_list(self):
+        author_1 = Author.objects.create(name='William S. Vincent', is_popular=False)
+        author_2 = Author.objects.create(name='William C. Wake', is_popular=False)
+        Book.objects.create(author=author_1,
+                            title='Django for APIs: Build web APIs with Python & Django')
+        Book.objects.create(author=author_1, title='Django for Professionals')
+        Book.objects.create(author=author_2, title='Refactoring Workbook')
+        author_id_list = [author_1.author_id, author_2.author_id]
+        books = Book.objects.get_all_books_by_author_id_list(author_id_list=author_id_list)
+        self.assertEqual(len(books), 3)
+
+        author_id_list = [self.author.author_id]
+        books = Book.objects.get_all_books_by_author_id_list(author_id_list=author_id_list)
+        self.assertEqual(len(books), 0)
 
     def test_get_all_books(self):
         author1 = self.author
@@ -291,7 +320,7 @@ class BookCopyModelTest(TestCase):
 
 class BorrowRecordManagerTest(TestCase):
     @classmethod
-    def setUpTestData(cls) -> None:
+    def setUpTestData(cls):
         author = Author.objects.insert_author(author=Author(name='Bjarne Stroustrup',
                                                             is_popular=False))
         book = Book.objects.insert_book(book=Book(title='A Tour of C++', author=author))
@@ -300,13 +329,12 @@ class BorrowRecordManagerTest(TestCase):
         cls.library_user = LibraryUser.objects.create(
                             email='john.doe@gmail.com', username='John Doe', password='pass')
 
-    @classmethod
-    def setUp(cls) -> None:
-        cls.borrow_record_instance = BorrowRecord(
+    def setUp(self):
+        self.borrow_record_instance = BorrowRecord(
                                         borrow_date=timezone.now(),
                                         return_date=timezone.now()+timedelta(days=14),
-                                        book_copy=cls.book_copy,
-                                        library_user=cls.library_user)
+                                        book_copy=self.book_copy,
+                                        library_user=self.library_user)
 
     def test_insert_borrow_record_successful_insertion(self):
         borrow_record = self.borrow_record_instance
@@ -354,6 +382,13 @@ class BorrowRecordManagerTest(TestCase):
                         borrow_record_id=borrow_record_id)
         self.assertEqual(search_result.borrow_record_id, borrow_record_id)
 
+    def test_get_borrow_record_by_id_raises_exception_for_invalid_borrow_record_id(self):
+        self.assertRaises(Exception, BorrowRecord.objects.get_borrow_record_by_owl_id,
+                            borrow_record_id=None)
+        random_borrow_record_id = uuid.uuid4()
+        self.assertRaises(Exception, BorrowRecord.objects.get_borrow_record_by_owl_id,
+                            borrow_record_id=random_borrow_record_id)
+
     def test_get_borrow_record_by_owl_id_and_username_returns_valid_record(self):
         borrow_record = self.borrow_record_instance
         inserted_record = BorrowRecord.objects.insert_borrow_record(
@@ -380,6 +415,7 @@ class BorrowRecordManagerTest(TestCase):
 
     def test_get_all_borrow_records_by_owl_id_returns_valid_records(self):
         # insert two records belonging to same book_copy but different users
+        # which is possible if second user borrows book after first user has returned it
         owl_id = self.book_copy.book.owl_id
         borrow_record = self.borrow_record_instance
         BorrowRecord.objects.insert_borrow_record(borrow_record=borrow_record)
@@ -407,7 +443,28 @@ class BorrowRecordManagerTest(TestCase):
                             username=username))
         self.assertEqual(len(borrow_records), 2)
 
-    def test_update_return_status(self):
+    def test_get_all_borrow_records_by_return_status_returns_valid_result(self):
+        borrow_record = self.borrow_record_instance
+        BorrowRecord.objects.insert_borrow_record(borrow_record=borrow_record)
+        book_2 = Book.objects.insert_book(book=Book(
+                    title='The Design and Evolution of C++',
+                    author=self.book_copy.book.author))
+        book_copy_instance_2 = BookCopy(
+                                book=book_2, book_copy_type=BookCopy.BOOK_COPY_TYPE.HANDMADE)
+        book_copy_2 = BookCopy.objects.insert_book_copy(book_copy=book_copy_instance_2)
+        borrow_record.book_copy = book_copy_2
+        BorrowRecord.objects.insert_borrow_record(borrow_record=borrow_record)
+        results = BorrowRecord.objects.get_all_borrow_records_by_return_status(
+                    is_returned=False)
+        self.assertEqual(len(results), 2)
+        for borrow_record in results:
+            self.assertEqual(borrow_record.is_returned, False)
+
+        results = BorrowRecord.objects.get_all_borrow_records_by_return_status(
+                    is_returned=True)
+        self.assertEqual(len(results), 0)
+
+    def test_update_return_status_successful_updation(self):
         borrow_record = self.borrow_record_instance
         borrow_record_id = BorrowRecord.objects.insert_borrow_record(
                             borrow_record=borrow_record).borrow_record_id
@@ -417,6 +474,27 @@ class BorrowRecordManagerTest(TestCase):
         self.assertEqual(rows_affected, 1)
         self.assertEqual(BorrowRecord.objects.get_borrow_record_by_owl_id(
                             borrow_record_id=borrow_record_id).is_returned, new_return_status)
+
+    def test_update_dates_and_status_successful_updation(self):
+        borrow_record = self.borrow_record_instance
+        borrow_record_id = BorrowRecord.objects.insert_borrow_record(
+                            borrow_record=borrow_record).borrow_record_id
+        new_borrow_date = timezone.now()
+        new_return_date = timezone.now()+timedelta(days=14)
+        rows_affected = BorrowRecord.objects.update_dates_and_status(
+                        borrow_record_id=borrow_record_id, borrow_date=new_borrow_date,
+                        return_date=new_return_date, return_status=False)
+        self.assertEqual(rows_affected, 1)
+
+    def test_update_dates_and_status_raises_exception_for_invalid_dates(self):
+        borrow_record = self.borrow_record_instance
+        borrow_record_id = BorrowRecord.objects.insert_borrow_record(
+                            borrow_record=borrow_record).borrow_record_id
+        new_borrow_date = timezone.now()
+        new_return_date = new_borrow_date
+        self.assertRaises(Exception, BorrowRecord.objects.update_dates_and_status,
+                            borrow_record_id=borrow_record_id, borrow_date=new_borrow_date,
+                            return_date=new_return_date, return_status=False)
 
     def test_delete_borrow_record_successful_deletion(self):
         borrow_record = self.borrow_record_instance
