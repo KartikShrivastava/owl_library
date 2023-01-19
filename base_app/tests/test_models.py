@@ -62,9 +62,8 @@ class AuthorManagerTest(TestCase):
     def test_get_author_by_owl_id_raises_exception_for_invalid_owl_id(self):
         random_owl_id = uuid.uuid4()
         self.assertRaises(Exception, Author.objects.get_author_by_owl_id,
-                            owl_id=random_owl_id)
-        self.assertRaises(Exception, Author.objects.get_author_by_owl_id,
-                            owl_id=None)
+                          owl_id=random_owl_id)
+        self.assertRaises(Exception, Author.objects.get_author_by_owl_id, owl_id=None)
 
     def test_update_author_name(self):
         old_name = self.author.name
@@ -384,10 +383,10 @@ class BorrowRecordManagerTest(TestCase):
 
     def test_get_borrow_record_by_id_raises_exception_for_invalid_borrow_record_id(self):
         self.assertRaises(Exception, BorrowRecord.objects.get_borrow_record_by_owl_id,
-                            borrow_record_id=None)
+                          borrow_record_id=None)
         random_borrow_record_id = uuid.uuid4()
         self.assertRaises(Exception, BorrowRecord.objects.get_borrow_record_by_owl_id,
-                            borrow_record_id=random_borrow_record_id)
+                          borrow_record_id=random_borrow_record_id)
 
     def test_get_borrow_record_by_owl_id_and_username_returns_valid_record(self):
         borrow_record = self.borrow_record_instance
@@ -493,8 +492,8 @@ class BorrowRecordManagerTest(TestCase):
         new_borrow_date = timezone.now()
         new_return_date = new_borrow_date
         self.assertRaises(Exception, BorrowRecord.objects.update_dates_and_status,
-                            borrow_record_id=borrow_record_id, borrow_date=new_borrow_date,
-                            return_date=new_return_date, return_status=False)
+                          borrow_record_id=borrow_record_id, borrow_date=new_borrow_date,
+                          return_date=new_return_date, return_status=False)
 
     def test_delete_borrow_record_successful_deletion(self):
         borrow_record = self.borrow_record_instance
