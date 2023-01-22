@@ -12,10 +12,12 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 
 from pathlib import Path
 import environ
+import os
 
-# init environment variables
+
+# init django-environ package, to fetch environment variables from .env file
 env = environ.Env()
-env.read_env()
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -78,15 +80,30 @@ TEMPLATES = [
 WSGI_APPLICATION = 'owl_library.wsgi.application'
 
 
+# get values from .env file if it exist otherwise get from os.environ
+# this is helpful in setting environment variables correctly in CI
+try:
+    root = environ.Path(__file__) - 1  # get owl_library folder path
+    environ.Env.read_env(root('.env'))
+    OWL_LIBRARY_DATABASE_NAME = env('DATABASE_NAME')
+    OWL_LIBRARY_DATABASE_USER = env('DATABASE_USER')
+    OWL_LIBRARY_DATABASE_PASS = env('DATABASE_PASS')
+except (FileNotFoundError, KeyError):
+    OWL_LIBRARY_DATABASE_NAME = os.environ.get('DATABASE_NAME')
+    OWL_LIBRARY_DATABASE_USER = os.environ.get('DATABASE_USER')
+    OWL_LIBRARY_DATABASE_PASS = os.environ.get('DATABASE_PASS')
+
+
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DATABASE_NAME'),
-        'USER': env('DATABASE_USER'),
-        'PASSWORD': env('DATABASE_PASS'),
+        'NAME': OWL_LIBRARY_DATABASE_NAME,
+        'USER': OWL_LIBRARY_DATABASE_USER,
+        'PASSWORD': OWL_LIBRARY_DATABASE_PASS,
+        'HOST': 'localhost',
+        'PORT': 5432,
     }
 }
 

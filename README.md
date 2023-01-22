@@ -76,7 +76,7 @@ This api has a very minimal authentication/authorization functionality just to m
 2. Create a virtual environment for the project
 3. Activate virtual environment
 4. Run `pip install -r requirements.txt`
-5. Create a `.env` file inside `owl_library` directory
+5. Create a `.env` file in `owl_library` directory
 6. Put following contents in your `.env` file (update fields according to your psql configuration)  
   DATABASE_NAME=existing_psql_database_name  
   DATABASE_USER=your_psql_username  
