@@ -51,4 +51,15 @@ jobs:
         DATABASE_USER: ${{ secrets.DATABASE_USER }}
         DATABASE_PASS: ${{ secrets.DATABASE_PASS }}
       run: |
-        python manage.py test --verbosity 2
+        coverage run manage.py test && coverage xml 
+
+    - name: Share test report with Codecov
+      env:
+        DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+        DATABASE_USER: ${{ secrets.DATABASE_USER }}
+        DATABASE_PASS: ${{ secrets.DATABASE_PASS }}
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        fail_ci_if_error: true
