@@ -1,3 +1,4 @@
+[![Django CI](https://github.com/KartikShrivastava/owl_library/actions/workflows/django-ci.yml/badge.svg)](https://github.com/KartikShrivastava/owl_library/actions/workflows/django-ci.yml) [![codecov](https://codecov.io/gh/KartikShrivastava/owl_library/branch/main/graph/badge.svg?token=GJXE9I6WF4)](https://codecov.io/gh/KartikShrivastava/owl_library)
 # Owl Library
 A minimal REST api written using django framework. This api uses django-rest-framework in REST api layer and uses postgresql in database layer. The project structure of this api resembles that of `n-tier architecture` and it was preferred over `MVT` architecture of django because of better abstraction of business logic from model layer(orm).  
 This api has a very minimal authentication/authorization functionality just to make sure two users can only be able to modify their own data. Rest of the functionality such as adding/removing books and authors are right now handled using django admin panel.
