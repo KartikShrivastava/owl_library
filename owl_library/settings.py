@@ -84,14 +84,16 @@ WSGI_APPLICATION = 'owl_library.wsgi.application'
 # this is helpful in setting environment variables correctly in CI
 try:
     root = environ.Path(__file__) - 1  # get owl_library folder path
-    environ.Env.read_env(root('.env'))
+    environ.Env.read_env(root('../../.env'))
     OWL_LIBRARY_DATABASE_NAME = env('DATABASE_NAME')
     OWL_LIBRARY_DATABASE_USER = env('DATABASE_USER')
     OWL_LIBRARY_DATABASE_PASS = env('DATABASE_PASS')
+    OWL_LIBRARY_HOST = env('DATABASE_HOST')
 except (FileNotFoundError, KeyError):
     OWL_LIBRARY_DATABASE_NAME = os.environ.get('DATABASE_NAME')
     OWL_LIBRARY_DATABASE_USER = os.environ.get('DATABASE_USER')
     OWL_LIBRARY_DATABASE_PASS = os.environ.get('DATABASE_PASS')
+    OWL_LIBRARY_HOST = os.environ.get('DATABASE_HOST')
 
 
 # Database
@@ -102,7 +104,7 @@ DATABASES = {
         'NAME': OWL_LIBRARY_DATABASE_NAME,
         'USER': OWL_LIBRARY_DATABASE_USER,
         'PASSWORD': OWL_LIBRARY_DATABASE_PASS,
-        'HOST': 'db',
+        'HOST': OWL_LIBRARY_HOST,
         'PORT': 5432,
     }
 }

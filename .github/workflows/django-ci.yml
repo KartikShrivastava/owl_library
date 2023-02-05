@@ -50,6 +50,7 @@ jobs:
         DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
         DATABASE_USER: ${{ secrets.DATABASE_USER }}
         DATABASE_PASS: ${{ secrets.DATABASE_PASS }}
+        DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
       run: |
         coverage run manage.py test && coverage xml 
 
