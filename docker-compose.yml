@@ -1,0 +1,27 @@
+services:
+  app:
+    build: .
+    command: sh -c "python manage.py makemigrations &&
+                    python manage.py migrate &&
+                    python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - 8000:8000
+    expose:
+      - 8000
+  
+  db:
+    image: postgres
+    restart: always
+    volumes:
+      - owl-library-data:/var/lib/postgres
+    environment:
+      POSTGRES_DB: owllibrary
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: kash
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
+
+volumes:
+    owl-library-data:

@@ -102,7 +102,7 @@ DATABASES = {
         'NAME': OWL_LIBRARY_DATABASE_NAME,
         'USER': OWL_LIBRARY_DATABASE_USER,
         'PASSWORD': OWL_LIBRARY_DATABASE_PASS,
-        'HOST': 'localhost',
+        'HOST': 'db',
         'PORT': 5432,
     }
 }
