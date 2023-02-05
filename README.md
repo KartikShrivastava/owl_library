@@ -68,7 +68,14 @@ This api has a very minimal authentication/authorization functionality just to m
 3. Legacy diagram 2 (missing requirements)  
   <img src="diagrams/ClassAndERD.png" alt="Your image title" width="50%"/>  
 
-## Project setup instructions
+## Steps to run api as docker container
+### Prerequisites
+1. Running docker engine
+### Steps
+1. Clone this github repo and go the directory of the project
+2. Open terminal and run command: `docker compose up`
+
+## Project setup instructions for development
 ### Prerequisites
 1. Postgresql installation
 2. Python3
@@ -77,7 +84,7 @@ This api has a very minimal authentication/authorization functionality just to m
 2. Create a virtual environment for the project
 3. Activate virtual environment
 4. Run `pip install -r requirements.txt`
-5. Create a `.env` file in `owl_library` directory
+5. Create a `.env` file in parent directory of github project directory
 6. Put following contents in your `.env` file (update fields according to your psql configuration)  
   DATABASE_NAME=existing_psql_database_name  
   DATABASE_USER=your_psql_username  
